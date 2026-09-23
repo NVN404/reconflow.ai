@@ -1,63 +1,64 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Server, Search } from "lucide-react";
+import { Server } from "lucide-react";
 import { NodeData } from "@/lib/types";
 
 interface AssetNodeProps {
-  data: NodeData;
+  data: NodeData & { layoutDirection?: "TB" | "LR" };
   selected?: boolean;
 }
 
 export const AssetNode = memo(({ data, selected }: AssetNodeProps) => {
-  const isBing = data.engine === "bing";
+  const isHorizontal = data.layoutDirection === "LR";
 
   return (
     <div
-      className={`relative px-4 py-2.5 rounded-lg bg-slate-900/90 backdrop-blur-md border transition-all duration-200 shadow-md ${
+      className={`relative w-[240px] p-4 rounded-xl bg-[#141a24] border transition-all duration-200 shadow-md ${
         selected
-          ? "border-blue-400 ring-2 ring-blue-400/30"
-          : "border-slate-800 hover:border-blue-500/60"
+          ? "border-teal-400/60 ring-2 ring-teal-400/20 shadow-teal-500/10"
+          : "border-white/[0.08] hover:border-white/[0.18]"
       }`}
-      style={{ minWidth: "190px" }}
     >
       <Handle
         type="target"
-        position={Position.Top}
-        className="!bg-blue-400 !border-slate-900"
+        position={isHorizontal ? Position.Left : Position.Top}
+        className="!bg-[#4ade9b] !border-[#141a24] !w-2.5 !h-2.5"
       />
 
-      <div className="flex items-center gap-2.5">
-        <div className="p-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
-          <Server className="w-4 h-4" />
+      {/* Top Row: Icon + Type Label */}
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-[#0f2e22] text-[#4ade9b] flex items-center justify-center flex-shrink-0">
+          <Server className="w-3.5 h-3.5" />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">
-              Host Asset
-            </span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-mono ${
-                isBing
-                  ? "bg-teal-500/10 text-teal-400 border border-teal-500/20"
-                  : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-              }`}
-            >
-              {data.engine || "google"}
-            </span>
-          </div>
-          <p className="text-xs font-semibold text-slate-200 truncate mt-0.5">
-            {data.label}
-          </p>
-        </div>
+        <span className="text-xs font-medium text-slate-400">
+          Host Asset
+        </span>
+      </div>
+
+      {/* Main Line: Title */}
+      <h3 className="text-sm font-semibold text-slate-100 truncate mt-2 leading-snug">
+        {data.label}
+      </h3>
+
+      {/* Bottom Row: Subtitle + Severity Badge */}
+      <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-white/[0.06]">
+        <span className="text-xs text-slate-400 truncate max-w-[120px]">
+          {data.surface || data.engine || "Subdomain"}
+        </span>
+        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#0f2e22] text-[#4ade9b]">
+          Low
+        </span>
       </div>
 
       <Handle
         type="source"
-        position={Position.Bottom}
-        className="!bg-blue-400 !border-slate-900"
+        position={isHorizontal ? Position.Right : Position.Bottom}
+        className="!bg-[#4ade9b] !border-[#141a24] !w-2.5 !h-2.5"
       />
     </div>
   );
 });
 
 AssetNode.displayName = "AssetNode";
+
+

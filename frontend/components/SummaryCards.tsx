@@ -1,6 +1,6 @@
 import React from "react";
-import { ShieldAlert, AlertTriangle, ShieldCheck, Cpu, Zap, Filter } from "lucide-react";
-import { ScanSummary, SeverityLevel } from "@/lib/types";
+import { ShieldAlert, AlertTriangle, Cpu, Zap } from "lucide-react";
+import { ScanSummary } from "@/lib/types";
 
 interface SummaryCardsProps {
   summary: ScanSummary;
@@ -16,37 +16,37 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   const getGradeColor = (grade: string) => {
     switch (grade) {
       case "A":
-        return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
+        return "bg-[#0f2e22] text-[#4ade9b]";
       case "B":
-        return "text-sky-400 border-sky-500/30 bg-sky-500/10";
+        return "bg-[#10253d] text-[#6fb2f5]";
       case "C":
-        return "text-amber-400 border-amber-500/30 bg-amber-500/10";
+        return "bg-[#3a2b0a] text-[#ffc26b]";
       case "D":
-        return "text-orange-400 border-orange-500/30 bg-orange-500/10";
+        return "bg-[#3a2013] text-[#ff9d6b]";
       default:
-        return "text-red-400 border-red-500/30 bg-red-500/10";
+        return "bg-[#3a1418] text-[#ff6b6a]";
     }
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 font-sans">
       {/* Top Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         {/* Security Health Grade */}
-        <div className="p-3.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-xl bg-[#141a24] border-0 flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-slate-400">
               Health Grade
             </p>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-2xl font-black text-slate-100">
+            <div className="flex items-baseline gap-1 mt-2">
+              <span className="text-[26px] font-medium text-slate-100">
                 {summary.security_score}
               </span>
               <span className="text-xs text-slate-400">/100</span>
             </div>
           </div>
           <div
-            className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black text-lg ${getGradeColor(
+            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${getGradeColor(
               summary.security_grade
             )}`}
           >
@@ -57,19 +57,19 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* Critical Exposures */}
         <button
           onClick={() => onFilterChange(activeFilter === "CRITICAL" ? "ALL" : "CRITICAL")}
-          className={`p-3.5 rounded-xl text-left transition-all backdrop-blur-md border shadow-lg ${
+          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
             activeFilter === "CRITICAL"
-              ? "bg-red-500/20 border-red-500/80 ring-2 ring-red-500/40"
-              : "bg-slate-900/80 border-slate-800 hover:border-red-500/40"
+              ? "bg-[#3a1418] ring-2 ring-[#ff6b6a]/40"
+              : "bg-[#141a24] hover:bg-[#1a2230]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-[#ff6b6a]">
               Critical
             </p>
-            <ShieldAlert className="w-4 h-4 text-red-400" />
+            <ShieldAlert className="w-4 h-4 text-[#ff6b6a]" />
           </div>
-          <p className="text-2xl font-black text-slate-100 mt-0.5">
+          <p className="text-[26px] font-medium text-slate-100 mt-2">
             {summary.critical_risks}
           </p>
         </button>
@@ -77,19 +77,19 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* High Risks */}
         <button
           onClick={() => onFilterChange(activeFilter === "HIGH" ? "ALL" : "HIGH")}
-          className={`p-3.5 rounded-xl text-left transition-all backdrop-blur-md border shadow-lg ${
+          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
             activeFilter === "HIGH"
-              ? "bg-orange-500/20 border-orange-500/80 ring-2 ring-orange-500/40"
-              : "bg-slate-900/80 border-slate-800 hover:border-orange-500/40"
+              ? "bg-[#3a2013] ring-2 ring-[#ff9d6b]/40"
+              : "bg-[#141a24] hover:bg-[#1a2230]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-[#ff9d6b]">
               High Risk
             </p>
-            <AlertTriangle className="w-4 h-4 text-orange-400" />
+            <AlertTriangle className="w-4 h-4 text-[#ff9d6b]" />
           </div>
-          <p className="text-2xl font-black text-slate-100 mt-0.5">
+          <p className="text-[26px] font-medium text-slate-100 mt-2">
             {summary.high_risks}
           </p>
         </button>
@@ -97,61 +97,63 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* Medium Exposures */}
         <button
           onClick={() => onFilterChange(activeFilter === "MEDIUM" ? "ALL" : "MEDIUM")}
-          className={`p-3.5 rounded-xl text-left transition-all backdrop-blur-md border shadow-lg ${
+          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
             activeFilter === "MEDIUM"
-              ? "bg-amber-500/20 border-amber-500/80 ring-2 ring-amber-500/40"
-              : "bg-slate-900/80 border-slate-800 hover:border-amber-500/40"
+              ? "bg-[#3a2b0a] ring-2 ring-[#ffc26b]/40"
+              : "bg-[#141a24] hover:bg-[#1a2230]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-[#ffc26b]">
               Medium
             </p>
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <AlertTriangle className="w-4 h-4 text-[#ffc26b]" />
           </div>
-          <p className="text-2xl font-black text-slate-100 mt-0.5">
+          <p className="text-[26px] font-medium text-slate-100 mt-2">
             {summary.medium_risks}
           </p>
         </button>
 
-        {/* Low / Assets */}
+        {/* Low / Subdomains */}
         <button
           onClick={() => onFilterChange(activeFilter === "LOW" ? "ALL" : "LOW")}
-          className={`p-3.5 rounded-xl text-left transition-all backdrop-blur-md border shadow-lg ${
+          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
             activeFilter === "LOW"
-              ? "bg-blue-500/20 border-blue-500/80 ring-2 ring-blue-500/40"
-              : "bg-slate-900/80 border-slate-800 hover:border-blue-500/40"
+              ? "bg-[#0f2e22] ring-2 ring-[#4ade9b]/40"
+              : "bg-[#141a24] hover:bg-[#1a2230]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-[#4ade9b]">
               Subdomains
             </p>
-            <Cpu className="w-4 h-4 text-blue-400" />
+            <Cpu className="w-4 h-4 text-[#4ade9b]" />
           </div>
-          <p className="text-2xl font-black text-slate-100 mt-0.5">
+          <p className="text-[26px] font-medium text-slate-100 mt-2">
             {summary.low_risks}
           </p>
         </button>
 
         {/* SerpApi Credits Used */}
-        <div className="p-3.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-xl bg-[#141a24] border-0 flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-[10px] font-semibold text-sky-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-[#6fb2f5]">
               SerpApi Credits
             </p>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-2xl font-black text-sky-400">
+            <div className="flex items-baseline gap-1 mt-2">
+              <span className="text-[26px] font-medium text-[#6fb2f5]">
                 {summary.serpapi_credits_used}
               </span>
-              <span className="text-xs text-slate-500 font-mono">queries</span>
+              <span className="text-xs text-slate-400">queries</span>
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400">
-            <Zap className="w-5 h-5 animate-pulse" />
+          <div className="p-2 rounded-lg bg-[#10253d] text-[#6fb2f5]">
+            <Zap className="w-4 h-4" />
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+

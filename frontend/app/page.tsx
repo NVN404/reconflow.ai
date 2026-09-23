@@ -1,14 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ShieldAlert,
   Download,
-  Terminal,
-  Activity,
-  Github,
-  Globe,
-  RefreshCw,
   Sparkles,
 } from "lucide-react";
 
@@ -27,6 +22,7 @@ export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult>(defaultMockData as unknown as ScanResult);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [layoutDirection, setLayoutDirection] = useState<"TB" | "LR">("TB");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [thoughts, setThoughts] = useState<AgentThought[]>([
     {
@@ -42,6 +38,11 @@ export default function Home() {
       status: "success",
     },
   ]);
+
+  // Handle Graph Layout Direction Toggle
+  const handleToggleLayout = () => {
+    setLayoutDirection((prev) => (prev === "TB" ? "LR" : "TB"));
+  };
 
   // Layout nodes with Dagre auto-layout
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
@@ -63,9 +64,9 @@ export default function Home() {
     return getLayoutedElements(
       filteredNodes as unknown as GraphNode[],
       filteredEdges,
-      "TB"
+      layoutDirection
     );
-  }, [scanResult, activeFilter]);
+  }, [scanResult, activeFilter, layoutDirection]);
 
   // Handle Scan Request
   const handleScan = async (domain: string, enablePhase2: boolean, useCache: boolean) => {
@@ -86,7 +87,6 @@ export default function Home() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
       const res = await fetch(`${apiUrl}/api/scan`, {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -178,25 +178,25 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#0d1117] text-slate-100 flex flex-col font-sans">
       {/* Top Header / Navigation Bar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40">
+      <header className="border-b border-white/[0.06] bg-[#0d1117]/90 backdrop-blur-xl sticky top-0 z-40 font-sans">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30 text-white font-black text-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md shadow-sky-500/20 text-white font-bold">
               <ShieldAlert className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-black tracking-wide text-slate-100">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-base font-bold tracking-tight text-slate-100">
                   RECONFLOW<span className="text-sky-400">.AI</span>
                 </h1>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
+                <span className="text-xs font-sans font-medium px-2.5 py-0.5 rounded-md bg-[#10253d] text-[#6fb2f5]">
                   Track 01: AI Agents
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-400 font-normal">
                 Autonomous External Attack Surface Management & Threat Intelligence
               </p>
             </div>
@@ -204,17 +204,17 @@ export default function Home() {
 
           {/* Right Header Badges & Actions */}
           <div className="flex items-center gap-3">
-            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-400 bg-[#141a24] border border-white/[0.06] px-3 py-1.5 rounded-lg font-sans">
+              <span className="w-2 h-2 rounded-full bg-[#4ade9b]" />
               SerpApi Hackathon 2026
             </span>
 
             <button
               onClick={handleExportDossier}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm"
+              className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-lg bg-[#141a24] hover:bg-[#1a2230] text-slate-200 border border-white/[0.08] hover:border-white/[0.18] transition-all duration-150 active:scale-95 shadow-sm cursor-pointer font-sans"
               title="Download executive audit report in Markdown"
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-[#6fb2f5]" />
               <span>Export Dossier</span>
             </button>
           </div>
@@ -228,12 +228,12 @@ export default function Home() {
 
         {/* Executive Threat Briefing Callout */}
         {scanResult?.executive_summary && (
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-md flex items-start gap-3 shadow-lg">
-            <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 mt-0.5">
+          <div className="p-4 rounded-xl bg-[#141a24] border border-white/[0.08] flex items-start gap-3.5 shadow-sm font-sans">
+            <div className="p-2 rounded-lg bg-[#10253d] text-[#6fb2f5] mt-0.5">
               <Sparkles className="w-4 h-4" />
             </div>
             <div className="flex-1 text-xs leading-relaxed text-slate-300">
-              <span className="font-bold text-slate-100 font-mono uppercase tracking-wider block mb-1">
+              <span className="font-semibold text-slate-100 block mb-1">
                 Executive Threat Briefing
               </span>
               {scanResult.executive_summary}
@@ -257,6 +257,8 @@ export default function Home() {
             edges={layoutedEdges}
             onNodeClick={setSelectedNode}
             selectedNodeId={selectedNode?.id}
+            layoutDirection={layoutDirection}
+            onToggleLayout={handleToggleLayout}
           />
 
           {/* Finding Detail Slide-Out Drawer */}
@@ -268,14 +270,14 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/80 py-4 mt-8">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-2 font-mono">
+      <footer className="border-t border-white/[0.06] bg-[#0d1117] py-4 mt-8 font-sans">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <div>
-            Built with <strong className="text-slate-400">serpapi-search-tools</strong> &amp;{" "}
-            <strong className="text-slate-400">SerpApi MCP</strong> for SerpApi India Hackathon 2026.
+            Built with <strong className="text-slate-400 font-medium">serpapi-search-tools</strong> &amp;{" "}
+            <strong className="text-slate-400 font-medium">SerpApi MCP</strong> for SerpApi India Hackathon 2026.
           </div>
           <div>
-            Target: <span className="text-sky-400">{scanResult?.summary?.target || "demo-sandbox.corp"}</span> |{" "}
+            Target: <span className="text-[#6fb2f5] font-mono">{scanResult?.summary?.target || "demo-sandbox.corp"}</span> |{" "}
             Zero-Credit Development Mode Active
           </div>
         </div>
@@ -283,3 +285,4 @@ export default function Home() {
     </div>
   );
 }
+

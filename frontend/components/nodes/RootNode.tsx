@@ -1,46 +1,58 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { ShieldAlert, Globe } from "lucide-react";
+import { Globe } from "lucide-react";
 import { NodeData } from "@/lib/types";
 
 interface RootNodeProps {
-  data: NodeData;
+  data: NodeData & { layoutDirection?: "TB" | "LR" };
   selected?: boolean;
 }
 
 export const RootNode = memo(({ data, selected }: RootNodeProps) => {
+  const isHorizontal = data.layoutDirection === "LR";
+
   return (
     <div
-      className={`relative px-5 py-3 rounded-xl bg-slate-900/90 backdrop-blur-md border transition-all duration-300 shadow-xl ${
+      className={`relative w-[240px] p-4 rounded-xl bg-[#141a24] border transition-all duration-200 shadow-xl ${
         selected
-          ? "border-sky-400 ring-2 ring-sky-400/40 shadow-sky-500/20"
-          : "border-sky-500/40 hover:border-sky-400 shadow-black/40"
+          ? "border-sky-400/60 ring-2 ring-sky-400/20 shadow-sky-500/10"
+          : "border-white/[0.08] hover:border-white/[0.18]"
       }`}
-      style={{ minWidth: "220px" }}
     >
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400">
-          <Globe className="w-5 h-5 animate-spin-slow" />
+      {/* Top Row: Icon + Type Label */}
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-[#10253d] text-[#6fb2f5] flex items-center justify-center flex-shrink-0">
+          <Globe className="w-3.5 h-3.5" />
         </div>
-        <div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold tracking-wider text-sky-400 uppercase bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-              Apex Domain
-            </span>
-          </div>
-          <h3 className="text-sm font-bold text-slate-100 tracking-wide mt-0.5 truncate max-w-[180px]">
-            {data.label}
-          </h3>
-        </div>
+        <span className="text-xs font-medium text-slate-400">
+          Apex Domain
+        </span>
+      </div>
+
+      {/* Main Line: Title */}
+      <h3 className="text-sm font-semibold text-slate-100 truncate mt-2 leading-snug">
+        {data.label}
+      </h3>
+
+      {/* Bottom Row: Subtitle + Severity Badge */}
+      <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-white/[0.06]">
+        <span className="text-xs text-slate-400 truncate max-w-[120px]">
+          {data.surface || "Apex DNS"}
+        </span>
+        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#10253d] text-[#6fb2f5]">
+          Info
+        </span>
       </div>
 
       <Handle
         type="source"
-        position={Position.Bottom}
-        className="!bg-sky-400 !border-slate-900"
+        position={isHorizontal ? Position.Right : Position.Bottom}
+        className="!bg-[#6fb2f5] !border-[#141a24] !w-2.5 !h-2.5"
       />
     </div>
   );
 });
 
 RootNode.displayName = "RootNode";
+
+

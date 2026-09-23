@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ExternalLink, Copy, Check, ShieldAlert, Terminal, FileCode2, ArrowRight } from "lucide-react";
+import { X, ExternalLink, Copy, Check, ShieldAlert } from "lucide-react";
 import { GraphNode } from "@/lib/types";
 
 interface FindingDrawerProps {
@@ -7,16 +7,50 @@ interface FindingDrawerProps {
   onClose: () => void;
 }
 
+const getDrawerBadgeStyles = (severity: string, isNews: boolean) => {
+  if (isNews) {
+    return {
+      label: "Threat Intel Advisory",
+      class: "bg-[#281b3b] text-[#c084fc]",
+    };
+  }
+  switch (severity?.toUpperCase()) {
+    case "CRITICAL":
+      return {
+        label: "Critical Severity",
+        class: "bg-[#3a1418] text-[#ff6b6a]",
+      };
+    case "HIGH":
+      return {
+        label: "High Severity",
+        class: "bg-[#3a2013] text-[#ff9d6b]",
+      };
+    case "MEDIUM":
+      return {
+        label: "Medium Severity",
+        class: "bg-[#3a2b0a] text-[#ffc26b]",
+      };
+    case "LOW":
+      return {
+        label: "Low Severity",
+        class: "bg-[#0f2e22] text-[#4ade9b]",
+      };
+    default:
+      return {
+        label: "Info Severity",
+        class: "bg-[#10253d] text-[#6fb2f5]",
+      };
+  }
+};
+
 export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) => {
   const [copied, setCopied] = useState(false);
 
   if (!node) return null;
 
   const { data } = node;
-  const isCritical = data.severity === "CRITICAL";
-  const isHigh = data.severity === "HIGH";
-  const isMedium = data.severity === "MEDIUM";
   const isNews = data.category === "NEWS_BREACH";
+  const badgeStyle = getDrawerBadgeStyles(data.severity, isNews);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -25,43 +59,36 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-slate-950/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-50 flex flex-col transition-all duration-300 animate-in slide-in-from-right">
+    <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-[#141a24] border-l border-white/[0.08] shadow-2xl z-50 flex flex-col transition-all duration-300 ease-out animate-in slide-in-from-right font-sans">
       {/* Header */}
-      <div className="p-5 border-b border-slate-800/80 flex items-start justify-between bg-slate-900/50">
+      <div className="p-5 border-b border-white/[0.06] flex items-start justify-between bg-[#161c28]">
         <div>
           <div className="flex items-center gap-2">
             <span
-              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                isNews
-                  ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
-                  : isCritical
-                  ? "bg-red-500/20 text-red-400 border-red-500/40"
-                  : isHigh
-                  ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
-                  : isMedium
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                  : "bg-sky-500/20 text-sky-400 border-sky-500/40"
-              }`}
+              className={`text-xs font-medium px-2.5 py-1 rounded-md ${badgeStyle.class}`}
             >
-              {isNews ? "THREAT INTEL ADVISORY" : `${data.severity} SEVERITY`}
+              {badgeStyle.label}
             </span>
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50">
+            <span className="text-xs font-medium text-slate-400 px-2 py-0.5 rounded bg-[#0d1117]">
               {data.surface}
             </span>
           </div>
 
-          <h2 className="text-base font-bold text-slate-100 mt-2 leading-tight">
+          <h2 className="text-base font-semibold text-slate-100 mt-2.5 leading-snug">
             {data.label}
           </h2>
         </div>
 
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#1a2230] transition active:scale-95 cursor-pointer"
+          title="Close drawer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
+
+
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5 text-sm">

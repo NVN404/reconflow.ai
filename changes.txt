@@ -1,0 +1,119 @@
+===============================================================================
+RECONFLOW AI — PROJECT CHANGE LOG & ARCHITECTURAL HISTORICAL RECORD
+===============================================================================
+Project: ReconFlow AI (Autonomous EASM & Threat Intelligence Agent)
+Hackathon: SerpApi India Hackathon 2026 (Track 01: AI Agents)
+Repository Root: d:\company projects\Serpi\reconflow.ai
+Date Generated: 2026-09-23
+===============================================================================
+
+-------------------------------------------------------------------------------
+1. OVERVIEW & INITIAL BASELINE STATE
+-------------------------------------------------------------------------------
+ReconFlow AI was initialized as an Autonomous External Attack Surface Management 
+(EASM) engine. The core objective is to execute multi-pass Google Dorking via 
+SerpApi proxy infrastructure to discover subdomains, exposed API docs, 
+sensitive .env configuration leaks, GitHub credential exposure, and public S3 
+cloud storage buckets.
+
+Initial project components:
+- Backend: Python 3.9+ FastAPI service under /backend executing raw HTTP requests
+  to https://serpapi.com/search and optionally Google Gemini for executive summaries.
+- Frontend: Next.js 14 App Router application under /frontend rendering an
+  interactive graph canvas via @xyflow/react and Dagre auto-layout.
+
+-------------------------------------------------------------------------------
+2. BACKEND ARCHITECTURE & DATA CONTRACT (UNTOUCHED / PRESERVED)
+-------------------------------------------------------------------------------
+The backend contract and services were kept 100% intact to preserve team compatibility:
+- FastAPI Endpoints:
+  * GET /health -> Health check & MCP status.
+  * POST /api/scan -> Accepts ScanRequest(domain, enable_phase2, use_cache),
+    executes Phase1DomainScanner, returns ScanResult.
+  * GET /api/cache/{domain} -> Fetches filesystem JSON cache from backend/cache/.
+  * GET /api/remediation -> Returns OWASP/CWE remediation playbooks.
+- Data Schemas (app/schemas.py):
+  * FindingMetadata: url, snippet, dork_used, discovered_at
+  * NodeData: label, category, severity, origin, surface, engine, owasp_tag, cwe_id, remediation, metadata
+  * GraphNode: id, type, data, position
+  * GraphEdge: id, source, target, label, animated, style
+  * ScanSummary: target, total_nodes, critical_risks, high_risks, medium_risks, low_risks, info, security_score, security_grade, serpapi_credits_used
+  * AgentThought: timestamp, stage, message, status
+  * ScanResult: summary, executive_summary, nodes, edges, thoughts
+
+-------------------------------------------------------------------------------
+3. FRONTEND VISUAL REDESIGN & GRAPH UX ENHANCEMENTS (COMPLETED)
+-------------------------------------------------------------------------------
+
+[A] Graph Layout Toggle (Vertical vs. Horizontal)
+- Added layout direction state management (layoutDirection: "TB" | "LR") in page.tsx.
+- Created interactive layout toggle button in GraphCanvas.tsx (using ArrowLeftRight / ArrowUpDown icons).
+- Updated getLayoutedElements in frontend/lib/layout.ts to calculate spatial coordinates for both "TB" (top-to-bottom) and "LR" (left-to-right) orientations.
+- Configured dynamic targetPosition ("left" | "top") and sourcePosition ("right" | "bottom") on nodes for seamless wire routing.
+
+[B] Automatic Canvas Framing (fitView)
+- Wrapped GraphCanvas in ReactFlowProvider and integrated an automated fitView trigger.
+- Canvas automatically fits and centers the full graph on screen upon scan load, filter change, or layout direction toggle, eliminating forced manual pan/zoom.
+
+[C] Edge Label Backdrops & Wire Overlap Fix
+- Added dark slate backdrop pills (fill: #0f172a, stroke: #334155, rounded corners) behind all relationship edge labels (EXPOSES_API, CODE_LEAK, HOSTS, etc.).
+- Set edge type to smoothstep curves with animated dash-flow keyframes (edgeFlow) on active edge paths.
+
+[D] Unified Node Card Design System
+- Standardized all 4 node card components (RootNode, AssetNode, FindingNode, ExternalNode) to use:
+  * Identical width (240px), corner radius (12px / rounded-xl), and padding (16px / p-4).
+  * Softened border opacity (border-white/[0.08]) instead of solid hard borders.
+  * Slightly elevated card background (#141a24) over page background (#0d1117).
+  * Top row: Small circle icon tint + clean sans-serif type label.
+  * Main line: Domain or finding title in sans-serif font.
+  * Bottom row: Muted surface/CWE subtitle + sentence-case severity badge.
+
+[E] Dark-Theme Desaturated Severity Badge Colors
+- Implemented deep desaturated background tints with pale/bright text pairs:
+  * Critical: Background #3a1418 | Text #ff6b6a
+  * High: Background #3a2013 | Text #ff9d6b
+  * Medium: Background #3a2b0a | Text #ffc26b
+  * Low: Background #0f2e22 | Text #4ade9b
+  * Info: Background #10253d | Text #6fb2f5
+- Updated badge casing to sentence case (Critical, High, Medium, Low, Info) with soft 6-8px border radius and 4px 10px padding (px-2.5 py-1).
+
+[F] Borderless Metric / Stat Cards (SummaryCards.tsx)
+- Removed hard borders (border-0) from top metric cards, utilizing #141a24 background differentiation.
+- Increased metric number font size to 26px (text-[26px]), adjusted font-weight to medium (500), and increased top spacing (mt-2).
+- Converted labels to clean sans-serif typography.
+
+[G] Thought Stream & Header Readability
+- Increased Thought Stream log font size from text-[10px] to text-xs (12px).
+- Enforced a fixed height container (h-48) with internal scrolling so accumulated logs do not alter page layout.
+- Reserved monospace typography strictly for technical values (timestamps, URLs, CWE codes, dork queries); all labels, badges, headers, and subtitles use clean sans-serif (font-sans).
+
+[H] Performance Optimizations
+- Created frontend/next.config.js with experimental.optimizePackageImports: ['lucide-react', '@xyflow/react']. SWC compiler tree-shakes icons, reducing initial dev compilation modules from 1463+ to ~200.
+- Replaced external Google Font <link> tags in app/layout.tsx with native next/font/google loaders (Inter & JetBrains_Mono).
+- Updated package.json script from "dev": "next dev -p 3000" to "dev": "next dev", allowing Next.js to gracefully fall back to port 3001 if port 3000 is occupied.
+
+-------------------------------------------------------------------------------
+4. SUMMARY OF MODIFIED & CREATED FILES
+-------------------------------------------------------------------------------
+- frontend/app/globals.css              : Updated dark background (#0d1117), ReactFlow styles, and keyframes.
+- frontend/app/layout.tsx               : Added next/font/google local font preloading.
+- frontend/app/page.tsx                 : Added layout direction state, layout toggle handler, refined header.
+- frontend/next.config.js               : Created SWC package import optimizations for lucide-react.
+- frontend/package.json                 : Updated dev script for port fallback flexibility.
+- frontend/tsconfig.json                : Resolved Next.js build cache inclusion rules.
+- frontend/lib/layout.ts                : Added TB and LR rankdir calculation and handle positioning.
+- frontend/components/GraphCanvas.tsx   : Added ReactFlowProvider, fitView auto-trigger, layout toggle button, and edge backdrops.
+- frontend/components/SummaryCards.tsx  : Borderless metric cards with 26px numbers and dark-theme badge pairs.
+- frontend/components/ThoughtStream.tsx : Fixed-height scrolling container with readable 12px font size.
+- frontend/components/SearchBar.tsx     : Refined focus rings and button interaction scale effects.
+- frontend/components/FindingDrawer.tsx : Overlay slide-out panel with exact dark-theme badge pairs.
+- frontend/components/nodes/RootNode.tsx: Unified 240px card with sans-serif labels and Info badge pair.
+- frontend/components/nodes/AssetNode.tsx: Unified 240px card with sans-serif labels and Low badge pair.
+- frontend/components/nodes/FindingNode.tsx: Unified 240px card with exact badge pairs and ambient critical pulse.
+- frontend/components/nodes/ExternalNode.tsx: Unified 240px card with dashed border and exact badge pairs.
+- frontend/docs/redesign/README.md      : Plain-language developer & collaborator redesign documentation.
+- changes.txt                           : Project change log & architectural historical record.
+
+===============================================================================
+END OF HISTORICAL RECORD
+===============================================================================

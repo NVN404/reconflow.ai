@@ -7,15 +7,17 @@ const nodeHeight = 85;
 export const getLayoutedElements = (
   nodes: GraphNode[],
   edges: GraphEdge[],
-  direction = "TB"
+  direction: "TB" | "LR" = "TB"
 ): { nodes: GraphNode[]; edges: GraphEdge[] } => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
+  const isHorizontal = direction === "LR";
+
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 50,
-    ranksep: 90,
+    nodesep: isHorizontal ? 50 : 55,
+    ranksep: isHorizontal ? 150 : 95,
     marginx: 40,
     marginy: 40,
   });
@@ -34,6 +36,12 @@ export const getLayoutedElements = (
     const nodeWithPosition = dagreGraph.node(node.id);
     return {
       ...node,
+      targetPosition: isHorizontal ? "left" : "top",
+      sourcePosition: isHorizontal ? "right" : "bottom",
+      data: {
+        ...node.data,
+        layoutDirection: direction,
+      },
       position: {
         x: nodeWithPosition.x - nodeWidth / 2,
         y: nodeWithPosition.y - nodeHeight / 2,
@@ -41,5 +49,6 @@ export const getLayoutedElements = (
     };
   });
 
-  return { nodes: layoutedNodes, edges };
+  return { nodes: layoutedNodes as unknown as GraphNode[], edges };
 };
+
