@@ -1,0 +1,211 @@
+{
+  "summary": {
+    "target": "demo-sandbox.corp",
+    "total_nodes": 7,
+    "critical_risks": 2,
+    "high_risks": 1,
+    "medium_risks": 2,
+    "low_risks": 1,
+    "info": 1,
+    "security_score": 45,
+    "security_grade": "D",
+    "serpapi_credits_used": 3,
+    "generated_at": "2026-09-23T08:30:00Z"
+  },
+  "executive_summary": "ReconFlow AI autonomous sweep of demo-sandbox.corp discovered 7 assets across the perimeter. Security Posture Grade: D (Score 45/100). The organization has 2 CRITICAL findings including an exposed production .env file on staging and a public RSA key on GitHub. Immediate perimeter hardening and credential rotation required.",
+  "nodes": [
+    {
+      "id": "node-root",
+      "type": "rootNode",
+      "data": {
+        "label": "demo-sandbox.corp",
+        "category": "ROOT_DOMAIN",
+        "severity": "INFO",
+        "origin": "INTERNAL",
+        "surface": "Apex DNS",
+        "engine": "google_light",
+        "metadata": {
+          "url": "https://demo-sandbox.corp",
+          "snippet": "Corporate Apex Host for Enterprise Demo Sandbox",
+          "dork_used": "N/A",
+          "discovered_at": "2026-09-23T08:30:00Z"
+        }
+      },
+      "position": { "x": 600, "y": 50 }
+    },
+    {
+      "id": "node-sub-staging",
+      "type": "assetNode",
+      "data": {
+        "label": "staging-api.demo-sandbox.corp",
+        "category": "INFRASTRUCTURE",
+        "severity": "LOW",
+        "origin": "INTERNAL",
+        "surface": "Subdomain",
+        "engine": "google",
+        "metadata": {
+          "url": "https://staging-api.demo-sandbox.corp",
+          "snippet": "Internal QA & Staging API Gateway Cluster for developer onboarding.",
+          "dork_used": "site:*.demo-sandbox.corp -www.demo-sandbox.corp",
+          "discovered_at": "2026-09-23T08:30:01Z"
+        }
+      },
+      "position": { "x": 300, "y": 220 }
+    },
+    {
+      "id": "node-sub-qa",
+      "type": "assetNode",
+      "data": {
+        "label": "qa-auth.demo-sandbox.corp",
+        "category": "INFRASTRUCTURE",
+        "severity": "LOW",
+        "origin": "INTERNAL",
+        "surface": "Subdomain",
+        "engine": "bing",
+        "metadata": {
+          "url": "https://qa-auth.demo-sandbox.corp",
+          "snippet": "Single Sign-On and OAuth2 authentication portal for QA cluster.",
+          "dork_used": "site:demo-sandbox.corp -www.demo-sandbox.corp",
+          "discovered_at": "2026-09-23T08:30:01Z"
+        }
+      },
+      "position": { "x": 150, "y": 220 }
+    },
+    {
+      "id": "node-api-docs",
+      "type": "findingNode",
+      "data": {
+        "label": "Public Swagger API Gateway",
+        "category": "API_DOCS",
+        "severity": "MEDIUM",
+        "origin": "INTERNAL",
+        "surface": "Interactive Documentation",
+        "engine": "google",
+        "owasp_tag": "OWASP A01:2021 — Broken Access Control",
+        "cwe_id": "CWE-215",
+        "remediation": "Place /swagger-ui and /openapi.json behind an authenticated gateway or corporate VPN. Inject 'X-Robots-Tag: noindex, nofollow' response header.",
+        "metadata": {
+          "url": "https://staging-api.demo-sandbox.corp/swagger-ui.html",
+          "snippet": "Swagger UI interactive schema detailing customer records and authentication endpoints.",
+          "dork_used": "site:demo-sandbox.corp (inurl:swagger-ui OR inurl:graphiql)",
+          "discovered_at": "2026-09-23T08:30:02Z"
+        }
+      },
+      "position": { "x": 100, "y": 420 }
+    },
+    {
+      "id": "node-leak-env",
+      "type": "findingNode",
+      "data": {
+        "label": "Exposed Production .env File",
+        "category": "CONFIG_LEAK",
+        "severity": "CRITICAL",
+        "origin": "INTERNAL",
+        "surface": "Web Server Root",
+        "engine": "google",
+        "owasp_tag": "OWASP A05:2021 — Security Misconfiguration",
+        "cwe_id": "CWE-200",
+        "remediation": "Block access to dotfiles in NGINX: 'location ~ /\\.(?!well-known) { deny all; return 404; }'. Rotate exposed database credentials immediately.",
+        "metadata": {
+          "url": "https://staging-api.demo-sandbox.corp/.env",
+          "snippet": "DB_HOST=10.0.4.1 DB_PASSWORD=prod_vault_secret_99 JWT_SECRET=supersecret",
+          "dork_used": "site:demo-sandbox.corp (filetype:env OR filetype:sql)",
+          "discovered_at": "2026-09-23T08:30:03Z"
+        }
+      },
+      "position": { "x": 380, "y": 420 }
+    },
+    {
+      "id": "node-ext-github",
+      "type": "externalNode",
+      "data": {
+        "label": "Private RSA Key on GitHub",
+        "category": "GITHUB_LEAK",
+        "severity": "CRITICAL",
+        "origin": "EXTERNAL",
+        "surface": "GitHub Repository",
+        "engine": "google",
+        "owasp_tag": "OWASP A07:2021 — Identification and Authentication Failures",
+        "cwe_id": "CWE-312",
+        "remediation": "Immediately revoke key in cloud console. Rewrite commit history using 'git-filter-repo'. Deploy pre-commit hooks (TruffleHog/Gitleaks).",
+        "metadata": {
+          "url": "https://github.com/developer/sandbox-demo-repo/blob/main/id_rsa",
+          "snippet": "-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEA0r1...",
+          "dork_used": "site:github.com \"demo-sandbox.corp\" \"BEGIN RSA PRIVATE KEY\"",
+          "discovered_at": "2026-09-23T08:30:04Z"
+        }
+      },
+      "position": { "x": 850, "y": 220 }
+    },
+    {
+      "id": "node-ext-s3",
+      "type": "externalNode",
+      "data": {
+        "label": "Open AWS S3 Financial Dump",
+        "category": "S3_LEAK",
+        "severity": "HIGH",
+        "origin": "EXTERNAL",
+        "surface": "AWS S3 Bucket",
+        "engine": "google",
+        "owasp_tag": "OWASP A01:2021 — Broken Access Control",
+        "cwe_id": "CWE-552",
+        "remediation": "Enable AWS S3 'Block Public Access' at account root. Audit bucket ACLs and replace public links with short-lived Pre-Signed URLs.",
+        "metadata": {
+          "url": "https://s3.amazonaws.com/demo-sandbox-corp-backups/payroll_2025.xlsx",
+          "snippet": "Index of s3://demo-sandbox-corp-backups/ containing payroll exports and tax forms.",
+          "dork_used": "(site:s3.amazonaws.com OR site:storage.googleapis.com) \"demo-sandbox.corp\" (filetype:xlsx OR filetype:sql)",
+          "discovered_at": "2026-09-23T08:30:05Z"
+        }
+      },
+      "position": { "x": 1050, "y": 420 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-root-staging",
+      "source": "node-root",
+      "target": "node-sub-staging",
+      "label": "HOSTS",
+      "animated": false
+    },
+    {
+      "id": "edge-root-qa",
+      "source": "node-root",
+      "target": "node-sub-qa",
+      "label": "HOSTS",
+      "animated": false
+    },
+    {
+      "id": "edge-staging-api",
+      "source": "node-sub-staging",
+      "target": "node-api-docs",
+      "label": "EXPOSES_API",
+      "animated": false,
+      "style": { "stroke": "#f59e0b", "strokeWidth": 2 }
+    },
+    {
+      "id": "edge-staging-env",
+      "source": "node-sub-staging",
+      "target": "node-leak-env",
+      "label": "CRITICAL_LEAK",
+      "animated": true,
+      "style": { "stroke": "#ef4444", "strokeWidth": 2.5 }
+    },
+    {
+      "id": "edge-root-github",
+      "source": "node-root",
+      "target": "node-ext-github",
+      "label": "CODE_LEAK",
+      "animated": true,
+      "style": { "stroke": "#dc2626", "strokeWidth": 2, "strokeDasharray": "5 5" }
+    },
+    {
+      "id": "edge-root-s3",
+      "source": "node-root",
+      "target": "node-ext-s3",
+      "label": "CLOUD_STORAGE",
+      "animated": false,
+      "style": { "stroke": "#f97316", "strokeWidth": 2 }
+    }
+  ]
+}
