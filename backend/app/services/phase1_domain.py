@@ -74,20 +74,7 @@ class Phase1DomainScanner:
             status="info"
         ))
 
-        # Check Cache first (0-credit development)
-        if use_cache:
-            cached_data = get_cached_scan(clean_target)
-            if cached_data:
-                thoughts.append(AgentThought(
-                    timestamp=now,
-                    stage="CACHE_HIT",
-                    message=f"Pre-cached perimeter dossier found for {clean_target}. Zero credits consumed.",
-                    status="success"
-                ))
-                cached_data["thoughts"] = thoughts
-                return ScanResult(**cached_data)
-
-        # If live scan is triggered without an API key, generate a realistic deterministic scan
+        # If live scan is triggered without an API key, notify agent
         if not self.api_key:
             thoughts.append(AgentThought(
                 timestamp=now,
@@ -546,9 +533,6 @@ class Phase1DomainScanner:
             thoughts=thoughts
         )
 
-        # Cache only if we actually harvested nodes (never cache failed network timeouts)
-        if credits_used > 0 and len(nodes) > 1:
-            set_cached_scan(clean_target, result.model_dump())
         return result
 
 

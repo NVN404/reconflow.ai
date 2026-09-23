@@ -20,25 +20,42 @@ import { ThoughtStream } from "@/components/ThoughtStream";
 import { getLayoutedElements } from "@/lib/layout";
 import { ScanResult, GraphNode, AgentThought } from "@/lib/types";
 
-// Load static golden mock fixture for instant zero-dependency rendering
-import defaultMockData from "@/lib/demo_mock.json";
+const initialScanResult: ScanResult = {
+  summary: {
+    target: "Standing By",
+    total_nodes: 0,
+    critical_risks: 0,
+    high_risks: 0,
+    medium_risks: 0,
+    low_risks: 0,
+    info: 0,
+    security_score: 100,
+    security_grade: "A",
+    serpapi_credits_used: 0,
+    generated_at: new Date().toISOString(),
+  },
+  executive_summary: "ReconFlow AI Armed. Enter any enterprise domain (e.g. excalidraw.com) and click 'Execute Live Recon' to initiate real-time multi-engine reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
+  nodes: [],
+  edges: [],
+  thoughts: [],
+};
 
 export default function Home() {
-  const [scanResult, setScanResult] = useState<ScanResult>(defaultMockData as unknown as ScanResult);
+  const [scanResult, setScanResult] = useState<ScanResult>(initialScanResult);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [thoughts, setThoughts] = useState<AgentThought[]>([
     {
-      timestamp: "08:30:00",
-      stage: "READY",
-      message: "ReconFlow AI Agent initialized. SerpApi MCP integration armed.",
+      timestamp: new Date().toLocaleTimeString("en-GB"),
+      stage: "ARMED",
+      message: "ReconFlow AI Multi-Engine Agent initialized (Google, Bing, DuckDuckGo, YouTube, Google Play).",
       status: "info",
     },
     {
-      timestamp: "08:30:01",
-      stage: "CACHE_LOADED",
-      message: "Benchmark sandbox environment loaded for demo-sandbox.corp.",
+      timestamp: new Date().toLocaleTimeString("en-GB"),
+      stage: "READY",
+      message: "100% Live Recon mode active (Zero Cache). Ready to audit target perimeter.",
       status: "success",
     },
   ]);
@@ -67,8 +84,8 @@ export default function Home() {
     );
   }, [scanResult, activeFilter]);
 
-  // Handle Scan Request
-  const handleScan = async (domain: string, enablePhase2: boolean, useCache: boolean) => {
+  // Handle Live Scan Request
+  const handleScan = async (domain: string, enablePhase2: boolean = true) => {
     setIsScanning(true);
     setSelectedNode(null);
 
@@ -78,7 +95,7 @@ export default function Home() {
       {
         timestamp: startTime,
         stage: "DISPATCH",
-        message: `Deploying SerpApi autonomous recon agent for target: ${domain}...`,
+        message: `Deploying live SerpApi multi-engine recon agent for target: ${domain}...`,
         status: "info",
       },
     ]);
@@ -86,13 +103,12 @@ export default function Home() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
       const res = await fetch(`${apiUrl}/api/scan`, {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           domain,
           enable_phase2: enablePhase2,
-          use_cache: useCache,
+          use_cache: false,
         }),
       });
 
@@ -105,29 +121,17 @@ export default function Home() {
       } else {
         throw new Error(`Backend returned status ${res.status}`);
       }
-    } catch (err) {
-      console.warn("Backend unavailable, falling back to client-side simulated scan:", err);
-
-      // Graceful client-side fallback for offline presentation
-      setTimeout(() => {
-        setThoughts((prev) => [
-          ...prev,
-          {
-            timestamp: new Date().toLocaleTimeString("en-GB"),
-            stage: "SIMULATION",
-            message: `Running in zero-credit benchmark mode for ${domain}.`,
-            status: "warning",
-          },
-          {
-            timestamp: new Date().toLocaleTimeString("en-GB"),
-            stage: "COMPLETE",
-            message: `Identified perimeter assets for ${domain}. Generating visual relationship graph.`,
-            status: "success",
-          },
-        ]);
-        setIsScanning(false);
-      }, 1200);
-      return;
+    } catch (err: any) {
+      console.error("Live scan failed:", err);
+      setThoughts((prev) => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString("en-GB"),
+          stage: "ERROR",
+          message: `Scan error: ${err?.message || "Failed to reach backend"}. Please verify backend on port 8001.`,
+          status: "critical",
+        },
+      ]);
     }
 
     setIsScanning(false);
@@ -275,8 +279,8 @@ export default function Home() {
             <strong className="text-slate-400">SerpApi MCP</strong> for SerpApi India Hackathon 2026.
           </div>
           <div>
-            Target: <span className="text-sky-400">{scanResult?.summary?.target || "demo-sandbox.corp"}</span> |{" "}
-            Zero-Credit Development Mode Active
+            Target: <span className="text-sky-400">{scanResult?.summary?.target || "Standing By"}</span> |{" "}
+            <span className="text-emerald-400">100% Live Multi-Engine Reconnaissance Active</span>
           </div>
         </div>
       </footer>
