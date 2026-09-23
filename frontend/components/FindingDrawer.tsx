@@ -17,6 +17,38 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
   const isHigh = data.severity === "HIGH";
   const isMedium = data.severity === "MEDIUM";
   const isNews = data.category === "NEWS_BREACH";
+  const isYoutube = data.category === "YOUTUBE_POC";
+  const isMobile = data.category === "MOBILE_APP";
+  const isToken = data.category === "TOKEN_LEAK";
+  const isDoc = data.category === "DOCUMENT_LEAK";
+
+  let badgeText = `${data.severity} SEVERITY`;
+  let badgeStyle = "bg-sky-500/20 text-sky-400 border-sky-500/40";
+  if (isNews) {
+    badgeText = "THREAT INTEL ADVISORY";
+    badgeStyle = "bg-purple-500/20 text-purple-300 border-purple-500/40";
+  } else if (isYoutube) {
+    badgeText = "EXPLOIT POC RADAR";
+    badgeStyle = "bg-rose-500/20 text-rose-300 border-rose-500/40";
+  } else if (isMobile) {
+    badgeText = "MOBILE CLIENT ASSET";
+    badgeStyle = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+  } else if (isToken) {
+    badgeText = "CRITICAL TOKEN LEAK";
+    badgeStyle = "bg-red-500/20 text-red-400 border-red-500/40";
+  } else if (isDoc) {
+    badgeText = "CONFIDENTIAL DOCUMENT";
+    badgeStyle = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+  } else if (isCritical) {
+    badgeText = "CRITICAL SEVERITY";
+    badgeStyle = "bg-red-500/20 text-red-400 border-red-500/40";
+  } else if (isHigh) {
+    badgeText = "HIGH SEVERITY";
+    badgeStyle = "bg-orange-500/20 text-orange-400 border-orange-500/40";
+  } else if (isMedium) {
+    badgeText = "MEDIUM SEVERITY";
+    badgeStyle = "bg-amber-500/20 text-amber-400 border-amber-500/40";
+  }
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -29,25 +61,20 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
       {/* Header */}
       <div className="p-5 border-b border-slate-800/80 flex items-start justify-between bg-slate-900/50">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                isNews
-                  ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
-                  : isCritical
-                  ? "bg-red-500/20 text-red-400 border-red-500/40"
-                  : isHigh
-                  ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
-                  : isMedium
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                  : "bg-sky-500/20 text-sky-400 border-sky-500/40"
-              }`}
+              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeStyle}`}
             >
-              {isNews ? "THREAT INTEL ADVISORY" : `${data.severity} SEVERITY`}
+              {badgeText}
             </span>
             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50">
               {data.surface}
             </span>
+            {data.engine && (
+              <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-wider px-1.5 py-0.5 rounded bg-cyan-950/50 border border-cyan-800/50">
+                ⚡ {data.engine}
+              </span>
+            )}
           </div>
 
           <h2 className="text-base font-bold text-slate-100 mt-2 leading-tight">

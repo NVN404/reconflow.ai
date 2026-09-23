@@ -23,6 +23,7 @@ app.add_middleware(
 scanner = Phase1DomainScanner()
 
 @app.get("/health")
+@app.get("/api/health")
 def health_check():
     return {
         "status": "ok",

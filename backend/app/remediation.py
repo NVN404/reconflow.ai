@@ -76,6 +76,59 @@ REMEDIATION_PLAYBOOKS: Dict[str, Dict[str, Any]] = {
             "2. Advisory Context: This is external security intelligence, not an active vulnerability or server misconfiguration on your perimeter."
         ],
         "default_directive": "Informational OSINT Advisory: Review the referenced research to ensure defense-in-depth posture. No server-side vulnerability detected on target domain."
+    },
+    "TOKEN_LEAK": {
+        "title": "Exposed API Key / Cloud Access Secret",
+        "severity": "CRITICAL",
+        "owasp_tag": "OWASP A07:2021 — Identification and Authentication Failures",
+        "cwe_id": "CWE-798: Use of Hard-coded Credentials",
+        "description": "Live API keys (e.g. AWS AKIA, Google AIzaSy, Stripe sk_live_, GitHub ghp_) indexed in client bundles or public endpoints.",
+        "actions": [
+            "1. Cloud Console Revocation:\n   Revoke the compromised token in your provider console (AWS IAM, Google Cloud, Stripe, GitHub) immediately.",
+            "2. Access Log Audit:\n   Review cloud provider audit logs for unauthorized API calls performed with the compromised credentials over the last 30 days.",
+            "3. Architecture Sanitization:\n   Ensure backend proxy endpoints handle third-party service calls instead of embedding secret keys in frontend builds.",
+            "4. Search Engine Cache Purge:\n   Submit an emergency de-indexing request via Google Search Console to remove cached snippets."
+        ],
+        "default_directive": "Immediately revoke exposed API key in provider console. Audit IAM access logs and purge cached asset from search engines."
+    },
+    "DOCUMENT_LEAK": {
+        "title": "Confidential Corporate Document Indexed",
+        "severity": "HIGH",
+        "owasp_tag": "OWASP A01:2021 — Broken Access Control",
+        "cwe_id": "CWE-200: Exposure of Sensitive Information",
+        "description": "Confidential or internal corporate spreadsheets, PDFs, or presentations indexed by public search crawlers.",
+        "actions": [
+            "1. Web Server Access Restriction:\n   Restrict public directory indexing and require corporate SSO for internal document repositories.",
+            "2. Header Hardening:\n   Add 'X-Robots-Tag: noindex, noarchive' to all internal document downloads.",
+            "3. Google Search Console De-indexation:\n   Submit an urgent removal request to purge cached copies and snippets from search engine indices."
+        ],
+        "default_directive": "Remove file from public web root or enforce SSO. Add 'X-Robots-Tag: noindex' and request immediate Google Search Console URL removal."
+    },
+    "YOUTUBE_POC": {
+        "title": "Public Exploit & Bug Bounty Disclosure Video",
+        "severity": "INFO",
+        "owasp_tag": None,
+        "cwe_id": None,
+        "description": "Security researcher demonstration video detailing a proof-of-concept exploit, vulnerability walk-through, or bug bounty finding referencing the target ecosystem.",
+        "actions": [
+            "1. Video Review & Triage:\n   Watch the proof-of-concept video to determine the specific component, endpoint, or vector demonstrated.",
+            "2. Patch Verification:\n   Cross-reference with internal patch records to verify whether the vulnerability has already been mitigated in production.",
+            "3. Researcher Outreach:\n   If the video discloses an uncoordinated 0-day, contact the author via their channel contacts for responsible disclosure."
+        ],
+        "default_directive": "Threat Intel PoC Radar: Review researcher video to verify if demonstrated exploit vector has been patched in your current deployment."
+    },
+    "MOBILE_APP": {
+        "title": "Official Mobile Application Perimeter",
+        "severity": "INFO",
+        "owasp_tag": None,
+        "cwe_id": None,
+        "description": "Official Android/iOS application package published in public app stores, representing a mobile client perimeter.",
+        "actions": [
+            "1. Mobile Backend API Audit:\n   Verify that API endpoints consumed by the mobile client enforce strict authentication and rate-limiting.",
+            "2. Certificate Pinning:\n   Ensure mobile client utilizes SSL certificate pinning to prevent MitM interception by attackers.",
+            "3. Obfuscation & Key Protection:\n   Enforce ProGuard/R8 bytecode obfuscation and eliminate hardcoded backend secrets in APK assets."
+        ],
+        "default_directive": "Mobile Perimeter Asset: Verify mobile client uses SSL pinning, bytecode obfuscation, and connects only to authenticated backend gateways."
     }
 }
 

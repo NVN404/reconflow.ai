@@ -180,14 +180,27 @@ def layout_graph(
         ))
 
         # Edge from Subdomain to Finding
+        if cat == "TOKEN_LEAK":
+            f_label = "EXPOSES_TOKEN"
+            f_color = "#ef4444"
+        elif cat == "DOCUMENT_LEAK":
+            f_label = "EXPOSES_DOC"
+            f_color = "#f59e0b"
+        elif is_critical:
+            f_label = "EXPOSES_SECRET"
+            f_color = "#ef4444"
+        else:
+            f_label = "EXPOSES_API"
+            f_color = "#38bdf8"
+
         edges.append(GraphEdge(
             id=f"edge-find-{idx}",
             source=parent_id,
             target=find_id,
-            label="EXPOSES_SECRET" if is_critical else "EXPOSES_API",
+            label=f_label,
             animated=is_critical,
             style={
-                "stroke": "#ef4444" if is_critical else "#f59e0b",
+                "stroke": f_color,
                 "strokeWidth": 2.5 if is_critical else 2.0
             }
         ))
@@ -200,15 +213,35 @@ def layout_graph(
         playbook = get_remediation_for_category(cat)
         is_critical = ext.get("severity") == "CRITICAL"
 
+        # Dedicated edge labeling & styling per category
+        if "GITHUB" in cat:
+            edge_label = "CODE_LEAK"
+            edge_color = "#ef4444" if is_critical else "#c084fc"
+        elif "S3" in cat:
+            edge_label = "CLOUD_STORAGE"
+            edge_color = "#f97316"
+        elif "NEWS" in cat:
+            edge_label = "THREAT_INTEL"
+            edge_color = "#38bdf8"
+        elif "YOUTUBE" in cat:
+            edge_label = "EXPLOIT_RADAR"
+            edge_color = "#f43f5e"
+        elif "MOBILE" in cat:
+            edge_label = "MOBILE_CLIENT"
+            edge_color = "#10b981"
+        else:
+            edge_label = "EXTERNAL_ASSET"
+            edge_color = "#94a3b8"
+
         nodes.append(GraphNode(
             id=ext_id,
             type="externalNode",
             data=NodeData(
-                label=ext.get("title", "External Leak"),
+                label=ext.get("title", "External Asset"),
                 category=cat,
-                severity=ext.get("severity", "HIGH"),
+                severity=ext.get("severity", "INFO"),
                 origin="EXTERNAL",
-                surface=ext.get("surface", "GitHub / S3"),
+                surface=ext.get("surface", "External Ecosystem"),
                 engine=ext.get("engine", "google"),
                 owasp_tag=playbook.get("owasp_tag"),
                 cwe_id=playbook.get("cwe_id"),
@@ -220,17 +253,17 @@ def layout_graph(
                     discovered_at="2026-09-23T08:30:04Z"
                 )
             ),
-            position={"x": ext_start_x + (idx * 220.0), "y": 250.0 + (idx * 150.0)}
+            position={"x": ext_start_x + ((idx % 3) * 230.0), "y": 200.0 + ((idx // 3) * 160.0)}
         ))
 
         edges.append(GraphEdge(
             id=f"edge-ext-{idx}",
             source=root_id,
             target=ext_id,
-            label="CODE_LEAK" if "GITHUB" in cat else "CLOUD_STORAGE",
+            label=edge_label,
             animated=is_critical,
             style={
-                "stroke": "#dc2626" if is_critical else "#f97316",
+                "stroke": edge_color,
                 "strokeWidth": 2.0,
                 "strokeDasharray": "5 5"
             }

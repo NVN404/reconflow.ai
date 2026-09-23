@@ -9,11 +9,11 @@ class FindingMetadata(BaseModel):
 
 class NodeData(BaseModel):
     label: str
-    category: str        # ROOT_DOMAIN | INFRASTRUCTURE | API_DOCS | CONFIG_LEAK | GITHUB_LEAK | S3_LEAK | NEWS_BREACH
+    category: str        # ROOT_DOMAIN | INFRASTRUCTURE | API_DOCS | CONFIG_LEAK | GITHUB_LEAK | S3_LEAK | NEWS_BREACH | TOKEN_LEAK | DOCUMENT_LEAK | YOUTUBE_POC | MOBILE_APP
     severity: str        # INFO | LOW | MEDIUM | HIGH | CRITICAL
     origin: str          # INTERNAL | EXTERNAL
-    surface: str         # Apex DNS | Subdomain | Web Server Root | GitHub Repository | AWS S3 Bucket | Google News
-    engine: str = "google" # google | google_light | bing | google_news
+    surface: str         # Apex DNS | Subdomain | Web Server Root | GitHub Repository | AWS S3 Bucket | Google News | Exploit Radar | Mobile Store
+    engine: str = "google" # google | google_light | bing | duckduckgo | google_news | youtube | google_play
     owasp_tag: Optional[str] = None
     cwe_id: Optional[str] = None
     remediation: Optional[str] = None

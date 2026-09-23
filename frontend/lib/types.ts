@@ -7,7 +7,11 @@ export type FindingCategory =
   | "CONFIG_LEAK"
   | "GITHUB_LEAK"
   | "S3_LEAK"
-  | "NEWS_BREACH";
+  | "NEWS_BREACH"
+  | "TOKEN_LEAK"
+  | "DOCUMENT_LEAK"
+  | "YOUTUBE_POC"
+  | "MOBILE_APP";
 
 export type FindingOrigin = "INTERNAL" | "EXTERNAL";
 
