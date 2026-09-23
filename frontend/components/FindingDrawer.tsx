@@ -13,7 +13,8 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
   if (!node) return null;
 
   const { data } = node;
-  const isCritical = data.severity === "CRITICAL";
+  const isClean = data.category === "VULN_STATUS_CLEAN";
+  const isCritical = data.severity === "CRITICAL" && !isClean;
   const isHigh = data.severity === "HIGH";
   const isMedium = data.severity === "MEDIUM";
   const isNews = data.category === "NEWS_BREACH";
@@ -24,12 +25,16 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
 
   let badgeText = `${data.severity} SEVERITY`;
   let badgeStyle = "bg-sky-500/20 text-sky-400 border-sky-500/40";
-  if (isNews) {
+
+  if (isClean) {
+    badgeText = "PERIMETER SECURE";
+    badgeStyle = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+  } else if (isNews) {
     badgeText = "THREAT INTEL ADVISORY";
     badgeStyle = "bg-purple-500/20 text-purple-300 border-purple-500/40";
   } else if (isYoutube) {
-    badgeText = "EXPLOIT POC RADAR";
-    badgeStyle = "bg-rose-500/20 text-rose-300 border-rose-500/40";
+    badgeText = "RESEARCHER POC RADAR";
+    badgeStyle = "bg-indigo-500/20 text-indigo-300 border-indigo-500/40";
   } else if (isMobile) {
     badgeText = "MOBILE CLIENT ASSET";
     badgeStyle = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
@@ -50,6 +55,13 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
     badgeStyle = "bg-amber-500/20 text-amber-400 border-amber-500/40";
   }
 
+  const sectionName = data.section === "VULNERABILITY" && !isClean
+    ? "🚨 VULNERABILITY SECTION"
+    : "🛡️ ASSETS & INTEL SECTION";
+  const sectionStyle = data.section === "VULNERABILITY" && !isClean
+    ? "bg-red-500/15 text-red-400 border-red-500/30"
+    : "bg-sky-500/15 text-sky-400 border-sky-500/30";
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -66,6 +78,11 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeStyle}`}
             >
               {badgeText}
+            </span>
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${sectionStyle}`}
+            >
+              {sectionName}
             </span>
             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50">
               {data.surface}
@@ -92,6 +109,21 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5 text-sm">
+        {/* AI Triage Layer Verification */}
+        {data.triage_reason && (
+          <div className="p-3.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                Autonomous AI Triage Layer
+              </p>
+            </div>
+            <p className="text-xs text-indigo-200 leading-relaxed">
+              {data.triage_reason}
+            </p>
+          </div>
+        )}
+
         {/* Compliance Tags */}
         {(data.owasp_tag || data.cwe_id) && (
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">

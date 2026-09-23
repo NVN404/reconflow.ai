@@ -8,7 +8,7 @@ import requests
 from app.config import SERPAPI_KEY, get_serpapi_key
 from app.cache import get_cached_scan, set_cached_scan
 from app.schemas import ScanResult, ScanSummary, AgentThought
-from app.services.triage import compute_security_score, build_executive_summary, layout_graph
+from app.services.triage import compute_security_score, build_executive_summary, layout_graph, ai_triage_findings
 
 class Phase1DomainScanner:
     def __init__(self, api_key: str = ""):
@@ -437,8 +437,15 @@ class Phase1DomainScanner:
                     v_link = vid.get("link", "")
                     v_snip = vid.get("description") or vid.get("snippet") or ""
                     
-                    # Verify relevance: video must reference the brand or target domain
-                    if brand_name not in v_title.lower() and brand_name not in v_snip.lower() and clean_target not in v_snip.lower():
+                    # Strict validation: video MUST genuinely discuss security (vulnerabilities, exploits, bug bounties, CVEs)
+                    security_terms = ["vulnerability", "exploit", "cve", "proof of concept", "bug bounty", "poc", "zero-day", "hackerone", "xss", "sqli", "rce", "security research", "bypass", "breach"]
+                    noise_terms = ["plugin", "update - links", "update -", "how to install", "tutorial", "walkthrough guide", "getting started", "template", "productivity", "review"]
+
+                    text_corpus = (v_title + " " + v_snip).lower()
+                    has_security = any(s in text_corpus for s in security_terms)
+                    is_benign_noise = any(n in v_title.lower() for n in noise_terms) and not any(s in v_title.lower() for s in ["exploit", "cve", "vulnerability", "bounty", "poc"])
+
+                    if not has_security or is_benign_noise:
                         continue
 
                     channel_info = vid.get("channel", {})
@@ -447,7 +454,7 @@ class Phase1DomainScanner:
                     pub_date = vid.get("published_date", "")
 
                     external_findings.append({
-                        "title": f"Exploit / Bounty Video: {v_title[:60]}",
+                        "title": v_title[:65],
                         "category": "YOUTUBE_POC",
                         "severity": "INFO",
                         "url": v_link,
@@ -498,15 +505,48 @@ class Phase1DomainScanner:
                 status="success"
             ))
 
-        # Assemble Graph with auto-layout
+        # --- AI TRIAGE LAYER: Gemini AI Vetting & False-Positive Elimination ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="AI_TRIAGE_INIT",
+            message=f"Engaging Gemini AI Triage Agent to evaluate {len(findings) + len(external_findings)} candidate findings for legitimacy...",
+            status="info"
+        ))
+
+        vetted_findings, int_discarded = ai_triage_findings(findings, clean_target, brand_name)
+        vetted_external, ext_discarded = ai_triage_findings(external_findings, clean_target, brand_name)
+        total_discarded = len(int_discarded) + len(ext_discarded)
+
+        # Log individual purged noise items for transparent auditability
+        for discarded in (int_discarded + ext_discarded):
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="AI_TRIAGE_PURGE",
+                message=f"AI Triage Filter purged noise: '{discarded.get('title')}' — {discarded.get('reason', 'Non-security item')}",
+                status="warning"
+            ))
+
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="AI_TRIAGE_COMPLETE",
+            message=f"AI Triage Complete: Verified {len(vetted_findings) + len(vetted_external)} legitimate security findings & assets. Purged {total_discarded} false-positive items.",
+            status="success" if total_discarded == 0 else "info"
+        ))
+
+        findings = vetted_findings
+        external_findings = vetted_external
+
+        # Assemble Graph with Dual-Zone layout (Zone 1: Info/Assets, Zone 2: Vulnerabilities)
         nodes, edges = layout_graph(clean_target, subdomains, findings, external_findings)
 
-        critical_count = sum(1 for f in findings + external_findings if f.get("severity") == "CRITICAL")
+        critical_count = sum(1 for f in findings + external_findings if f.get("severity") == "CRITICAL" and f.get("category") != "VULN_STATUS_CLEAN")
         high_count = sum(1 for f in findings + external_findings if f.get("severity") == "HIGH")
         medium_count = sum(1 for f in findings + external_findings if f.get("severity") == "MEDIUM")
         low_count = len(subdomains) + sum(1 for f in findings + external_findings if f.get("severity") == "LOW")
         info_count = 1 + sum(1 for f in findings + external_findings if f.get("severity") == "INFO")
 
+        vulnerability_count = sum(1 for f in findings + external_findings if f.get("section") == "VULNERABILITY" and f.get("category") != "VULN_STATUS_CLEAN")
+        info_assets_count = len(nodes) - vulnerability_count
 
         score, grade = compute_security_score(critical_count, high_count, medium_count, low_count)
         exec_summary = build_executive_summary(clean_target, len(nodes), critical_count, high_count, medium_count, score, grade)
@@ -519,6 +559,9 @@ class Phase1DomainScanner:
             medium_risks=medium_count,
             low_risks=low_count,
             info=info_count,
+            info_assets_count=info_assets_count,
+            vulnerability_count=vulnerability_count,
+            ai_discarded_noise_count=total_discarded,
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=credits_used,
@@ -600,7 +643,7 @@ class Phase1DomainScanner:
 
         external_findings = [
             {
-                "title": f"Exploit / Bounty Video: Bypassing Auth on {target.title()}",
+                "title": f"Research PoC Video: Auth Flow Analysis on {target.title()}",
                 "category": "YOUTUBE_POC",
                 "severity": "INFO",
                 "url": "https://www.youtube.com/watch?v=sample_poc_demo",
@@ -640,6 +683,9 @@ class Phase1DomainScanner:
             medium_risks=1,
             low_risks=3,
             info=3,
+            info_assets_count=len(nodes) - 2,
+            vulnerability_count=2,
+            ai_discarded_noise_count=0,
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=0,

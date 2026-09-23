@@ -64,11 +64,14 @@ export default function Home() {
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
     if (!scanResult || !scanResult.nodes) return { nodes: [], edges: [] };
 
-    // Apply severity filter if not 'ALL'
+    // Apply severity or section filter if not 'ALL'
     let filteredNodes = scanResult.nodes;
     if (activeFilter !== "ALL") {
       filteredNodes = scanResult.nodes.filter(
-        (n) => n.type === "rootNode" || (n.data as any).severity === activeFilter
+        (n) =>
+          n.type === "rootNode" ||
+          (n.data as any).severity === activeFilter ||
+          (n.data as any).section === activeFilter
       );
     }
 

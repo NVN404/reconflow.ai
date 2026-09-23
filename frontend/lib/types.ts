@@ -11,7 +11,8 @@ export type FindingCategory =
   | "TOKEN_LEAK"
   | "DOCUMENT_LEAK"
   | "YOUTUBE_POC"
-  | "MOBILE_APP";
+  | "MOBILE_APP"
+  | "VULN_STATUS_CLEAN";
 
 export type FindingOrigin = "INTERNAL" | "EXTERNAL";
 
@@ -29,6 +30,9 @@ export interface NodeData extends Record<string, unknown> {
   origin: FindingOrigin;
   surface: string;
   engine?: string;
+  section?: "INFO" | "VULNERABILITY";
+  triage_reason?: string;
+  triage_classification?: string;
   owasp_tag?: string;
   cwe_id?: string;
   remediation?: string;
@@ -48,6 +52,9 @@ export interface ScanSummary {
   medium_risks: number;
   low_risks: number;
   info: number;
+  info_assets_count?: number;
+  vulnerability_count?: number;
+  ai_discarded_noise_count?: number;
   security_score: number;
   security_grade: string;
   serpapi_credits_used: number;
