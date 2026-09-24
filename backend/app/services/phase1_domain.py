@@ -8,7 +8,7 @@ import requests
 from app.config import SERPAPI_KEY, get_serpapi_key
 from app.cache import get_cached_scan, set_cached_scan
 from app.schemas import ScanResult, ScanSummary, AgentThought
-from app.services.triage import compute_security_score, build_executive_summary, layout_graph
+from app.services.triage import compute_security_score, build_executive_summary, layout_graph, ai_triage_findings
 
 class Phase1DomainScanner:
     def __init__(self, api_key: str = ""):
@@ -27,15 +27,31 @@ class Phase1DomainScanner:
         params = {
             "api_key": key,
             "engine": engine,
-            "q": query,
             "num": 10
         }
+        if engine == "youtube":
+            params["search_query"] = query
+        else:
+            params["q"] = query
+
         try:
             resp = requests.get(url, params=params, timeout=35)
             data = resp.json()
             if resp.status_code == 200:
                 if engine == "google_news":
                     return data.get("news_results", []), None
+                elif engine == "youtube":
+                    return data.get("video_results", []), None
+                elif engine == "google_play":
+                    apps = []
+                    if "app_highlight" in data and isinstance(data["app_highlight"], dict):
+                        apps.append(data["app_highlight"])
+                    for cat in data.get("organic_results", []):
+                        if isinstance(cat, dict) and "items" in cat:
+                            apps.extend(cat.get("items", []))
+                        elif isinstance(cat, dict) and "title" in cat:
+                            apps.append(cat)
+                    return apps, None
                 return data.get("organic_results", []), None
             else:
                 error_msg = data.get("error", f"HTTP {resp.status_code}: {resp.text}")
@@ -58,20 +74,7 @@ class Phase1DomainScanner:
             status="info"
         ))
 
-        # Check Cache first (0-credit development)
-        if use_cache:
-            cached_data = get_cached_scan(clean_target)
-            if cached_data:
-                thoughts.append(AgentThought(
-                    timestamp=now,
-                    stage="CACHE_HIT",
-                    message=f"Pre-cached perimeter dossier found for {clean_target}. Zero credits consumed.",
-                    status="success"
-                ))
-                cached_data["thoughts"] = thoughts
-                return ScanResult(**cached_data)
-
-        # If live scan is triggered without an API key, generate a realistic deterministic scan
+        # If live scan is triggered without an API key, notify agent
         if not self.api_key:
             thoughts.append(AgentThought(
                 timestamp=now,
@@ -124,22 +127,37 @@ class Phase1DomainScanner:
             host = urlparse(link).netloc.lower()
             register_host(host, link, res.get("snippet", "Active subdomain asset."), pass1_query, "google")
 
-        # --- PASS 1.1b: Multi-Engine Bing Fallback ---
-        if len(subdomains) < 4:
-            bing_query = f"site:{clean_target} -www.{clean_target}"
-            thoughts.append(AgentThought(
-                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="PASS_1_1B",
-                message=f"Expanding perimeter via Bing Search Engine: '{bing_query}'",
-                status="info"
-            ))
-            bing_results, bing_err = self.execute_serpapi_query(bing_query, engine="bing")
-            if not bing_err:
-                credits_used += 1
-                for res in bing_results:
-                    link = res.get("link", "")
-                    host = urlparse(link).netloc.lower()
-                    register_host(host, link, res.get("snippet", "Cross-validated via Bing."), bing_query, "bing")
+        # --- PASS 1.1b: Multi-Engine Bing Expansion ---
+        bing_query = f"site:{clean_target} -www.{clean_target}"
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="PASS_1_1B",
+            message=f"Cross-validating perimeter via Bing: '{bing_query}'",
+            status="info"
+        ))
+        bing_results, bing_err = self.execute_serpapi_query(bing_query, engine="bing")
+        if not bing_err and bing_results:
+            credits_used += 1
+            for res in bing_results:
+                link = res.get("link", "")
+                host = urlparse(link).netloc.lower()
+                register_host(host, link, res.get("snippet", "Cross-validated via Bing."), bing_query, "bing")
+
+        # --- PASS 1.1c: Multi-Engine DuckDuckGo Expansion ---
+        ddg_query = f"site:*.{clean_target} -www.{clean_target}"
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="PASS_1_1C",
+            message=f"Bypassing robots.txt disallows via DuckDuckGo: '{ddg_query}'",
+            status="info"
+        ))
+        ddg_results, ddg_err = self.execute_serpapi_query(ddg_query, engine="duckduckgo")
+        if not ddg_err and ddg_results:
+            credits_used += 1
+            for res in ddg_results:
+                link = res.get("link", "")
+                host = urlparse(link).netloc.lower()
+                register_host(host, link, res.get("snippet", "Discovered via DuckDuckGo."), ddg_query, "duckduckgo")
 
         # --- PASS 1.2: Authentication Gateways, Portals & Interactive Docs ---
         pass2_query = f"site:{clean_target} (inurl:admin OR inurl:login OR inurl:portal OR inurl:auth OR inurl:docs OR inurl:api OR inurl:app OR inurl:dashboard)"
@@ -219,6 +237,76 @@ class Phase1DomainScanner:
                         message=f"CRITICAL leak detected: {link}",
                         status="critical"
                     ))
+
+        # --- PASS 1.4: Leaked Token Signature Scanning (TruffleHog in Search) ---
+        token_query = f"site:{clean_target} (\"AIzaSy\" OR \"sk_live_\" OR \"ghp_\" OR \"AKIA\")"
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="PASS_1_4",
+            message=f"Auditing perimeter for high-entropy API token signatures: '{token_query}'",
+            status="info"
+        ))
+        token_results, token_err = self.execute_serpapi_query(token_query, engine="google")
+        if not token_err and token_results:
+            credits_used += 1
+            for res in token_results:
+                link = res.get("link", "")
+                host = urlparse(link).netloc.lower()
+                if host == clean_target or host.endswith("." + clean_target):
+                    snip = res.get("snippet", "")
+                    matched_sig = "API Key"
+                    for sig in ["AIzaSy", "sk_live_", "ghp_", "AKIA"]:
+                        if sig in snip or sig in link:
+                            matched_sig = sig
+                            break
+                    findings.append({
+                        "title": f"Exposed Cloud Secret / Token Signature ({matched_sig})",
+                        "category": "TOKEN_LEAK",
+                        "severity": "CRITICAL",
+                        "host": host,
+                        "url": link,
+                        "snippet": snip or "Hardcoded API key signature detected in public endpoint.",
+                        "dork": token_query,
+                        "surface": "Web Client Bundle / Source",
+                        "engine": "google"
+                    })
+                    thoughts.append(AgentThought(
+                        timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                        stage="CRITICAL_ANOMALY",
+                        message=f"CRITICAL Token signature detected on {host}: {matched_sig}",
+                        status="critical"
+                    ))
+                    if len([f for f in findings if f["category"] == "TOKEN_LEAK"]) >= 3:
+                        break
+
+        # --- PASS 1.5: Confidential Corporate Documents (filetype:pdf / xlsx) ---
+        doc_query = f"site:{clean_target} (filetype:pdf OR filetype:xlsx OR filetype:docx) (\"CONFIDENTIAL\" OR \"INTERNAL USE ONLY\" OR \"PROPRIETARY\")"
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="PASS_1_5",
+            message=f"Probing for exposed confidential corporate documents: '{doc_query}'",
+            status="info"
+        ))
+        doc_results, doc_err = self.execute_serpapi_query(doc_query, engine="google")
+        if not doc_err and doc_results:
+            credits_used += 1
+            for res in doc_results:
+                link = res.get("link", "")
+                host = urlparse(link).netloc.lower()
+                if host == clean_target or host.endswith("." + clean_target):
+                    findings.append({
+                        "title": "Indexed Confidential Corporate Document",
+                        "category": "DOCUMENT_LEAK",
+                        "severity": "HIGH",
+                        "host": host,
+                        "url": link,
+                        "snippet": res.get("snippet", "Internal corporate document exposed to public crawlers."),
+                        "dork": doc_query,
+                        "surface": "Internal Corporate Document",
+                        "engine": "google"
+                    })
+                    if len([f for f in findings if f["category"] == "DOCUMENT_LEAK"]) >= 3:
+                        break
 
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
@@ -333,22 +421,132 @@ class Phase1DomainScanner:
                         "engine": "google_news"
                     })
 
+            # Pass 2.4: YouTube Live Exploit & Bug Bounty Radar
+            yt_query = f"\"{brand_name}\" (\"proof of concept\" OR \"vulnerability\" OR \"exploit\" OR \"bug bounty\")"
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PASS_2_4",
+                message=f"Scanning YouTube for public exploit PoCs & bug bounty disclosures: '{yt_query}'",
+                status="info"
+            ))
+            yt_results, yt_err = self.execute_serpapi_query(yt_query, engine="youtube")
+            if not yt_err and yt_results:
+                credits_used += 1
+                for vid in yt_results:
+                    v_title = vid.get("title", "")
+                    v_link = vid.get("link", "")
+                    v_snip = vid.get("description") or vid.get("snippet") or ""
+                    
+                    # Strict validation: video MUST genuinely discuss security (vulnerabilities, exploits, bug bounties, CVEs)
+                    security_terms = ["vulnerability", "exploit", "cve", "proof of concept", "bug bounty", "poc", "zero-day", "hackerone", "xss", "sqli", "rce", "security research", "bypass", "breach"]
+                    noise_terms = ["plugin", "update - links", "update -", "how to install", "tutorial", "walkthrough guide", "getting started", "template", "productivity", "review"]
+
+                    text_corpus = (v_title + " " + v_snip).lower()
+                    has_security = any(s in text_corpus for s in security_terms)
+                    is_benign_noise = any(n in v_title.lower() for n in noise_terms) and not any(s in v_title.lower() for s in ["exploit", "cve", "vulnerability", "bounty", "poc"])
+
+                    if not has_security or is_benign_noise:
+                        continue
+
+                    channel_info = vid.get("channel", {})
+                    channel_name = channel_info.get("name", "Unknown Channel") if isinstance(channel_info, dict) else str(channel_info)
+                    views = vid.get("views", "N/A")
+                    pub_date = vid.get("published_date", "")
+
+                    external_findings.append({
+                        "title": v_title[:65],
+                        "category": "YOUTUBE_POC",
+                        "severity": "INFO",
+                        "url": v_link,
+                        "snippet": f"Channel: {channel_name} | Views: {views} | {pub_date}. {v_snip}"[:250],
+                        "dork": yt_query,
+                        "surface": "YouTube Exploit Radar",
+                        "engine": "youtube"
+                    })
+                    if len([f for f in external_findings if f["category"] == "YOUTUBE_POC"]) >= 3:
+                        break
+
+            # Pass 2.5: Google Play Mobile Perimeter Mapping
+            play_query = brand_name
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PASS_2_5",
+                message=f"Mapping mobile application perimeter via Google Play: '{play_query}'",
+                status="info"
+            ))
+            play_results, play_err = self.execute_serpapi_query(play_query, engine="google_play")
+            if not play_err and play_results:
+                credits_used += 1
+                for app in play_results:
+                    app_title = app.get("title", "")
+                    pkg_id = app.get("product_id", "")
+                    app_link = app.get("link", "")
+                    # Match brand in package ID or title to avoid irrelevant competitor apps
+                    if brand_name in pkg_id.lower() or brand_name in app_title.lower():
+                        dev = app.get("developer", "N/A")
+                        rating = app.get("rating", "N/A")
+                        external_findings.append({
+                            "title": f"Mobile Client: {app_title}",
+                            "category": "MOBILE_APP",
+                            "severity": "INFO",
+                            "url": app_link,
+                            "snippet": f"Package: {pkg_id} | Rating: {rating}★ | Developer: {dev}",
+                            "dork": f"engine:google_play q={play_query}",
+                            "surface": "Google Play Store",
+                            "engine": "google_play"
+                        })
+                        if len([f for f in external_findings if f["category"] == "MOBILE_APP"]) >= 2:
+                            break
+
             thoughts.append(AgentThought(
                 timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
                 stage="PHASE_2_COMPLETE",
-                message=f"Phase 2 Complete: Mapped external ecosystem and threat intelligence.",
+                message=f"Phase 2 Complete: Mapped external ecosystem, YouTube exploit radar, and mobile attack surface.",
                 status="success"
             ))
 
-        # Assemble Graph with auto-layout
+        # --- AI TRIAGE LAYER: Gemini AI Vetting & False-Positive Elimination ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="AI_TRIAGE_INIT",
+            message=f"Engaging Gemini AI Triage Agent to evaluate {len(findings) + len(external_findings)} candidate findings for legitimacy...",
+            status="info"
+        ))
+
+        vetted_findings, int_discarded = ai_triage_findings(findings, clean_target, brand_name)
+        vetted_external, ext_discarded = ai_triage_findings(external_findings, clean_target, brand_name)
+        total_discarded = len(int_discarded) + len(ext_discarded)
+
+        # Log individual purged noise items for transparent auditability
+        for discarded in (int_discarded + ext_discarded):
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="AI_TRIAGE_PURGE",
+                message=f"AI Triage Filter purged noise: '{discarded.get('title')}' — {discarded.get('reason', 'Non-security item')}",
+                status="warning"
+            ))
+
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="AI_TRIAGE_COMPLETE",
+            message=f"AI Triage Complete: Verified {len(vetted_findings) + len(vetted_external)} legitimate security findings & assets. Purged {total_discarded} false-positive items.",
+            status="success" if total_discarded == 0 else "info"
+        ))
+
+        findings = vetted_findings
+        external_findings = vetted_external
+
+        # Assemble Graph with Dual-Zone layout (Zone 1: Info/Assets, Zone 2: Vulnerabilities)
         nodes, edges = layout_graph(clean_target, subdomains, findings, external_findings)
 
-        critical_count = sum(1 for f in findings + external_findings if f.get("severity") == "CRITICAL")
+        critical_count = sum(1 for f in findings + external_findings if f.get("severity") == "CRITICAL" and f.get("category") != "VULN_STATUS_CLEAN")
         high_count = sum(1 for f in findings + external_findings if f.get("severity") == "HIGH")
         medium_count = sum(1 for f in findings + external_findings if f.get("severity") == "MEDIUM")
         low_count = len(subdomains) + sum(1 for f in findings + external_findings if f.get("severity") == "LOW")
         info_count = 1 + sum(1 for f in findings + external_findings if f.get("severity") == "INFO")
 
+        vulnerability_count = sum(1 for f in findings + external_findings if f.get("section") == "VULNERABILITY" and f.get("category") != "VULN_STATUS_CLEAN")
+        info_assets_count = len(nodes) - vulnerability_count
 
         score, grade = compute_security_score(critical_count, high_count, medium_count, low_count)
         exec_summary = build_executive_summary(clean_target, len(nodes), critical_count, high_count, medium_count, score, grade)
@@ -361,6 +559,9 @@ class Phase1DomainScanner:
             medium_risks=medium_count,
             low_risks=low_count,
             info=info_count,
+            info_assets_count=info_assets_count,
+            vulnerability_count=vulnerability_count,
+            ai_discarded_noise_count=total_discarded,
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=credits_used,
@@ -375,9 +576,6 @@ class Phase1DomainScanner:
             thoughts=thoughts
         )
 
-        # Cache only if we actually harvested nodes (never cache failed network timeouts)
-        if credits_used > 0 and len(nodes) > 1:
-            set_cached_scan(clean_target, result.model_dump())
         return result
 
 
@@ -389,7 +587,7 @@ class Phase1DomainScanner:
                 "url": f"https://staging-api.{target}",
                 "snippet": "Internal staging API cluster for integration tests.",
                 "dork": f"site:*.{target} -www.{target}",
-                "engine": "google_light"
+                "engine": "google"
             },
             {
                 "host": f"qa-auth.{target}",
@@ -397,6 +595,13 @@ class Phase1DomainScanner:
                 "snippet": "Single Sign-On authentication gateway for QA team.",
                 "dork": f"site:{target} -www.{target}",
                 "engine": "bing"
+            },
+            {
+                "host": f"dev-mesh.{target}",
+                "url": f"https://dev-mesh.{target}",
+                "snippet": "Internal service mesh and staging router discovered bypassing robots.txt.",
+                "dork": f"site:*.{target} -www.{target}",
+                "engine": "duckduckgo"
             }
         ]
 
@@ -422,28 +627,65 @@ class Phase1DomainScanner:
                 "dork": f"site:{target} (filetype:env OR filetype:sql)",
                 "surface": "Web Server Root",
                 "engine": "google"
+            },
+            {
+                "title": "Exposed Cloud Secret / Token Signature (AIzaSy)",
+                "category": "TOKEN_LEAK",
+                "severity": "CRITICAL",
+                "host": f"dev-mesh.{target}",
+                "url": f"https://dev-mesh.{target}/main.bundle.js",
+                "snippet": "Hardcoded Google Cloud API key AIzaSyA0d... detected in public client bundle.",
+                "dork": f"site:{target} (\"AIzaSy\" OR \"sk_live_\")",
+                "surface": "Web Client Bundle / Source",
+                "engine": "google"
+            }
+        ]
+
+        external_findings = [
+            {
+                "title": f"Research PoC Video: Auth Flow Analysis on {target.title()}",
+                "category": "YOUTUBE_POC",
+                "severity": "INFO",
+                "url": "https://www.youtube.com/watch?v=sample_poc_demo",
+                "snippet": f"Channel: CyberSecurityLab | Views: 14.2K | 2026. Live proof of concept demonstrating OAuth flow anomaly on {target}.",
+                "dork": f"engine:youtube search_query='{target} vulnerability'",
+                "surface": "YouTube Exploit Radar",
+                "engine": "youtube"
+            },
+            {
+                "title": f"Mobile Client: {target.title()} Workspace",
+                "category": "MOBILE_APP",
+                "severity": "INFO",
+                "url": f"https://play.google.com/store/apps/details?id=com.{target.split('.')[0]}.app",
+                "snippet": f"Package: com.{target.split('.')[0]}.app | Rating: 4.8★ | Developer: {target.title()} Official",
+                "dork": f"engine:google_play q={target.split('.')[0]}",
+                "surface": "Google Play Store",
+                "engine": "google_play"
             }
         ]
 
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="SYNTHESIS",
-            message=f"Constructed attack surface graph for {target} with 2 subdomains and 2 security findings.",
+            message=f"Constructed multi-engine attack surface graph for {target} with 3 subdomains, 3 findings, and 2 threat intel assets.",
             status="success"
         ))
 
-        nodes, edges = layout_graph(target, subdomains, findings, [])
-        score, grade = compute_security_score(1, 0, 1, 2)
-        exec_summary = build_executive_summary(target, len(nodes), 1, 0, 1, score, grade)
+        nodes, edges = layout_graph(target, subdomains, findings, external_findings)
+        score, grade = compute_security_score(2, 0, 1, 3)
+        exec_summary = build_executive_summary(target, len(nodes), 2, 0, 1, score, grade)
 
         summary = ScanSummary(
             target=target,
             total_nodes=len(nodes),
-            critical_risks=1,
+            critical_risks=2,
             high_risks=0,
             medium_risks=1,
-            low_risks=2,
-            info=1,
+            low_risks=3,
+            info=3,
+            info_assets_count=len(nodes) - 2,
+            vulnerability_count=2,
+            ai_discarded_noise_count=0,
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=0,

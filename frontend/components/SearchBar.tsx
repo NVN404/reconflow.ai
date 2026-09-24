@@ -1,27 +1,24 @@
 import React, { useState } from "react";
-import { Search, Sparkles, Globe2 } from "lucide-react";
+import { Search, Sparkles, Globe2, Radio } from "lucide-react";
 
 interface SearchBarProps {
-  onScan: (domain: string, enablePhase2: boolean, useCache: boolean) => void;
+  onScan: (domain: string, enablePhase2: boolean) => void;
   isScanning: boolean;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
   const [domain, setDomain] = useState("excalidraw.com");
   const [enablePhase2, setEnablePhase2] = useState(true);
-  const [useCache, setUseCache] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain.trim()) return;
-    onScan(domain.trim(), enablePhase2, useCache);
+    onScan(domain.trim(), enablePhase2);
   };
 
-  const handleBenchmarkDemo = () => {
-    setDomain("demo-sandbox.corp");
-    setEnablePhase2(false);
-    setUseCache(true);
-    onScan("demo-sandbox.corp", false, true);
+  const handleQuickTarget = (targetDomain: string) => {
+    setDomain(targetDomain);
+    onScan(targetDomain, true);
   };
 
   return (
@@ -36,7 +33,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="Enter target enterprise domain (e.g. demo-sandbox.corp)"
+            placeholder="Enter target enterprise domain (e.g. excalidraw.com, stripe.com)"
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0f141c]/90 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-sm font-mono shadow-inner"
             disabled={isScanning}
           />
@@ -53,26 +50,26 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             {isScanning ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Sweeping Perimeter...</span>
+                <span>Sweeping 5 Engines...</span>
               </>
             ) : (
               <>
                 <Search className="w-4 h-4" />
-                <span>Execute Recon</span>
+                <span>Execute Live Recon</span>
               </>
             )}
           </button>
 
-          {/* Benchmark Demo Mode */}
+          {/* Quick Target Button */}
           <button
             type="button"
-            onClick={handleBenchmarkDemo}
+            onClick={() => handleQuickTarget("excalidraw.com")}
             disabled={isScanning}
             className="px-4 py-3 rounded-xl bg-[#0f141c]/90 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-sky-300 font-medium text-xs shadow-md transition-all duration-150 active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
-            title="Load verified sandbox fixture with 0 credit spend"
+            title="Scan live verified target excalidraw.com"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Benchmark Demo</span>
+            <span>Target: excalidraw.com</span>
           </button>
         </div>
       </form>
@@ -80,32 +77,26 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
       {/* Mode Controls */}
       <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-1">
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={useCache}
-              onChange={(e) => setUseCache(e.target.checked)}
-              className="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-400 focus:ring-offset-slate-950"
-            />
-            <span className="font-mono text-slate-300">Filesystem Cache (0-Credit Dev Mode)</span>
-          </label>
+          <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
+            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <span>100% Live Recon (Zero Cache)</span>
+          </div>
 
-          <label className="flex items-center gap-2 cursor-pointer select-none opacity-85 hover:opacity-100 transition">
+          <label className="flex items-center gap-2 cursor-pointer select-none opacity-90 hover:opacity-100 transition">
             <input
               type="checkbox"
               checked={enablePhase2}
               onChange={(e) => setEnablePhase2(e.target.checked)}
               className="rounded bg-slate-900 border-slate-700 text-purple-500 focus:ring-purple-400 focus:ring-offset-slate-950"
             />
-            <span className="font-mono text-purple-300">Phase 2: Shadow IT (GitHub / S3)</span>
+            <span className="font-mono text-purple-300">Phase 2: Threat Radar (YouTube / Play / GitHub / S3)</span>
           </label>
         </div>
 
-        <div className="font-mono text-[11px] text-slate-500">
-          Engine: <span className="text-sky-400">serpapi-search-tools (v1.0.0)</span>
+        <div className="font-mono text-[11px] text-slate-400">
+          Orchestration: <span className="text-cyan-400 font-semibold">5 SerpApi Engines Active</span>
         </div>
       </div>
     </div>
   );
 };
-

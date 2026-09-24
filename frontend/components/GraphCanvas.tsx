@@ -12,7 +12,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeftRight, ArrowUpDown } from "lucide-react";
+import { ArrowLeftRight, ArrowUpDown, ShieldCheck, ShieldAlert, Layers } from "lucide-react";
 
 import { RootNode } from "./nodes/RootNode";
 import { AssetNode } from "./nodes/AssetNode";
@@ -25,8 +25,8 @@ interface GraphCanvasProps {
   edges: Edge[];
   onNodeClick: (node: GraphNode) => void;
   selectedNodeId?: string;
-  layoutDirection: "TB" | "LR";
-  onToggleLayout: () => void;
+  layoutDirection?: "TB" | "LR";
+  onToggleLayout?: () => void;
 }
 
 const CanvasInner: React.FC<GraphCanvasProps> = ({
@@ -34,7 +34,7 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
   edges,
   onNodeClick,
   selectedNodeId,
-  layoutDirection,
+  layoutDirection = "TB",
   onToggleLayout,
 }) => {
   const { fitView } = useReactFlow();
@@ -52,7 +52,7 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
   useEffect(() => {
     if (nodes.length > 0) {
       const timer = setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        fitView({ padding: 0.18, duration: 300 });
       }, 50);
       return () => clearTimeout(timer);
     }
@@ -60,18 +60,38 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
 
   const styledEdges = useMemo(() => {
     return edges.map((edge) => {
-      const isCriticalEdge = edge.style?.stroke === "#ef4444" || edge.style?.stroke === "#dc2626";
+      const isCriticalEdge =
+        edge.style?.stroke === "#ef4444" ||
+        edge.style?.stroke === "#dc2626" ||
+        edge.style?.stroke === "#ff6b6a";
+      const isSecureEdge = edge.label === "PERIMETER_SECURE" || edge.style?.stroke === "#10b981";
       const isAnimated = edge.animated ?? isCriticalEdge;
+
+      let strokeColor = "#475569";
+      let labelTextColor = "#94a3b8";
+      let labelBorderColor = "#334155";
+
+      if (isCriticalEdge) {
+        strokeColor = "#ff6b6a";
+        labelTextColor = "#ff6b6a";
+        labelBorderColor = "rgba(255, 107, 106, 0.4)";
+      } else if (isSecureEdge) {
+        strokeColor = "#10b981";
+        labelTextColor = "#4ade9b";
+        labelBorderColor = "rgba(16, 185, 129, 0.4)";
+      }
+
       return {
         ...edge,
         type: "smoothstep",
         animated: isAnimated,
         style: {
-          stroke: isCriticalEdge ? "#E24B4A" : "#475569",
-          strokeWidth: isCriticalEdge ? 2 : 1.5,
+          stroke: strokeColor,
+          strokeWidth: isCriticalEdge ? 2.5 : 1.5,
+          ...edge.style,
         },
         labelStyle: {
-          fill: isCriticalEdge ? "#F87171" : "#94a3b8",
+          fill: labelTextColor,
           fontSize: 10,
           fontWeight: 600,
           fontFamily: "monospace",
@@ -79,7 +99,7 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
         labelBgStyle: {
           fill: "#0f172a",
           fillOpacity: 0.95,
-          stroke: isCriticalEdge ? "rgba(226, 75, 74, 0.4)" : "#334155",
+          stroke: labelBorderColor,
           strokeWidth: 1,
           rx: 4,
           ry: 4,
@@ -93,35 +113,86 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
     onNodeClick(node as unknown as GraphNode);
   };
 
-  return (
-    <div className="w-full h-[640px] rounded-2xl border border-slate-800/90 bg-[#0d1117] backdrop-blur-md shadow-2xl relative overflow-hidden">
-      {/* Canvas Top Bar Indicator */}
-      <div className="absolute top-3.5 left-3.5 z-10 flex items-center gap-2 bg-[#0f172a]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-300 pointer-events-none shadow-md">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>Interactive Attack Surface Graph</span>
-        <span className="text-slate-600">|</span>
-        <span className="text-[10px] text-slate-400">Click node for remediation</span>
-      </div>
+  const infoCount = useMemo(() => {
+    return nodes.filter((n) => (n.data as any)?.section !== "VULNERABILITY").length;
+  }, [nodes]);
 
-      {/* Top Right Layout Toggle Button */}
-      <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-2">
-        <button
-          onClick={onToggleLayout}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0f172a]/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-xs font-mono font-medium text-slate-200 shadow-md transition-all active:scale-95 cursor-pointer"
-          title={`Switch graph layout to ${layoutDirection === "TB" ? "Horizontal (Left-to-Right)" : "Vertical (Top-to-Bottom)"}`}
-        >
-          {layoutDirection === "TB" ? (
-            <>
-              <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
-              <span>Layout: Vertical</span>
-            </>
-          ) : (
-            <>
-              <ArrowUpDown className="w-3.5 h-3.5 text-sky-400" />
-              <span>Layout: Horizontal</span>
-            </>
-          )}
-        </button>
+  const activeVulnCount = useMemo(() => {
+    return nodes.filter(
+      (n) =>
+        (n.data as any)?.section === "VULNERABILITY" &&
+        (n.data as any)?.category !== "VULN_STATUS_CLEAN"
+    ).length;
+  }, [nodes]);
+
+  return (
+    <div className="w-full h-[640px] rounded-2xl border border-slate-800/90 bg-[#0d1117] backdrop-blur-md shadow-2xl relative overflow-hidden flex flex-col">
+      {/* Canvas Top Bar: Dual-Zone Architecture Indicator + Controls */}
+      <div className="absolute top-3.5 left-3.5 right-3.5 z-10 flex flex-wrap items-center justify-between pointer-events-none gap-2">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Zone 1: Info / Assets Section */}
+          <div className="flex items-center gap-2 bg-[#0f172a]/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-sky-500/30 text-xs font-mono text-sky-300 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+            <span className="font-semibold">ZONE 1: ASSETS & INTEL</span>
+            <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-[10px] font-bold text-sky-300">
+              {infoCount}
+            </span>
+          </div>
+
+          {/* Zone 2: Vulnerability Section */}
+          <div
+            className={`flex items-center gap-2 backdrop-blur-md px-3.5 py-1.5 rounded-xl border text-xs font-mono shadow-md ${
+              activeVulnCount > 0
+                ? "bg-[#3a1418]/90 border-red-500/60 text-red-300 animate-pulse-slow"
+                : "bg-[#0f2e22]/90 border-emerald-500/40 text-emerald-300"
+            }`}
+          >
+            {activeVulnCount > 0 ? (
+              <>
+                <ShieldAlert className="w-3.5 h-3.5 text-[#ff6b6a]" />
+                <span className="font-semibold">ZONE 2: VULNERABILITIES</span>
+                <span className="px-1.5 py-0.2 rounded bg-red-500/20 text-[10px] font-bold text-red-300">
+                  {activeVulnCount} Leaks
+                </span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5 text-[#4ade9b]" />
+                <span className="font-semibold">ZONE 2: VULN PERIMETER</span>
+                <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-[10px] font-bold text-[#4ade9b]">
+                  0 Active
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Top Right Layout Toggle Button */}
+        {onToggleLayout && (
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <button
+              onClick={onToggleLayout}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0f172a]/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-xs font-mono font-medium text-slate-200 shadow-md transition-all active:scale-95 cursor-pointer"
+              title={`Switch graph layout to ${
+                layoutDirection === "TB"
+                  ? "Horizontal (Left-to-Right)"
+                  : "Vertical (Top-to-Bottom)"
+              }`}
+            >
+              {layoutDirection === "TB" ? (
+                <>
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Layout: Vertical</span>
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Layout: Horizontal</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       <ReactFlow
@@ -130,7 +201,7 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.18 }}
         minZoom={0.15}
         maxZoom={1.5}
         defaultEdgeOptions={{
@@ -141,13 +212,20 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
         <Controls />
         <MiniMap
           nodeColor={(n) => {
-            if (n.type === "rootNode") return "#378ADD";
-            if (n.type === "assetNode") return "#1D9E75";
-            if (n.type === "externalNode") return "#a855f7";
+            if (n.type === "rootNode") return "#0284c7";
+            if (n.type === "assetNode") return "#3b82f6";
+            if ((n.data as any)?.category === "VULN_STATUS_CLEAN") return "#10b981";
+            if (n.type === "externalNode") {
+              const cat = (n.data as any)?.category;
+              if (cat === "MOBILE_APP") return "#10b981";
+              if (cat === "YOUTUBE_POC") return "#818cf8";
+              if (cat === "NEWS_BREACH") return "#38bdf8";
+              return "#c084fc";
+            }
             const severity = (n.data as any)?.severity;
-            if (severity === "CRITICAL") return "#E24B4A";
-            if (severity === "HIGH") return "#D85A30";
-            return "#EF9F27";
+            if (severity === "CRITICAL") return "#ff6b6a";
+            if (severity === "HIGH") return "#ff9d6b";
+            return "#38bdf8";
           }}
           maskColor="rgba(13, 17, 23, 0.75)"
         />
@@ -163,4 +241,3 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = (props) => {
     </ReactFlowProvider>
   );
 };
-

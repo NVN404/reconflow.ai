@@ -9,11 +9,14 @@ class FindingMetadata(BaseModel):
 
 class NodeData(BaseModel):
     label: str
-    category: str        # ROOT_DOMAIN | INFRASTRUCTURE | API_DOCS | CONFIG_LEAK | GITHUB_LEAK | S3_LEAK | NEWS_BREACH
+    category: str        # ROOT_DOMAIN | INFRASTRUCTURE | API_DOCS | CONFIG_LEAK | GITHUB_LEAK | S3_LEAK | NEWS_BREACH | TOKEN_LEAK | DOCUMENT_LEAK | YOUTUBE_POC | MOBILE_APP
     severity: str        # INFO | LOW | MEDIUM | HIGH | CRITICAL
     origin: str          # INTERNAL | EXTERNAL
-    surface: str         # Apex DNS | Subdomain | Web Server Root | GitHub Repository | AWS S3 Bucket | Google News
-    engine: str = "google" # google | google_light | bing | google_news
+    surface: str         # Apex DNS | Subdomain | Web Server Root | GitHub Repository | AWS S3 Bucket | Google News | Exploit Radar | Mobile Store | Perimeter Shield
+    engine: str = "google" # google | google_light | bing | duckduckgo | google_news | youtube | google_play
+    section: str = "INFO" # "INFO" (Perimeter Assets & Intel) | "VULNERABILITY" (Active Vulnerabilities & Leaks)
+    triage_reason: Optional[str] = None
+    triage_classification: Optional[str] = None
     owasp_tag: Optional[str] = None
     cwe_id: Optional[str] = None
     remediation: Optional[str] = None
@@ -41,6 +44,9 @@ class ScanSummary(BaseModel):
     medium_risks: int
     low_risks: int
     info: int
+    info_assets_count: int = 0
+    vulnerability_count: int = 0
+    ai_discarded_noise_count: int = 0
     security_score: int  # 0 to 100
     security_grade: str  # A, B, C, D, F
     serpapi_credits_used: int
