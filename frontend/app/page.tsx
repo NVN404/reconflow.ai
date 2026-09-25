@@ -29,7 +29,7 @@ const initialScanResult: ScanResult = {
     serpapi_credits_used: 0,
     generated_at: "2026-09-24T00:00:00Z",
   },
-  executive_summary: "ReconFlow AI Armed. Enter any enterprise domain (e.g. excalidraw.com) and click 'Execute Live Recon' to initiate real-time multi-engine reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
+  executive_summary: "ReconFlow AI Armed. Enter any target domain (e.g. reconflow.ai) and click 'Execute Live Recon' to initiate real-time multi-engine reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
   nodes: [],
   edges: [],
   thoughts: [],
@@ -51,7 +51,7 @@ export default function Home() {
     {
       timestamp: "READY",
       stage: "READY",
-      message: "100% Live Recon mode active (Zero Cache). Ready to audit target perimeter.",
+      message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
       status: "success",
     },
   ]);
@@ -69,7 +69,7 @@ export default function Home() {
       {
         timestamp: now,
         stage: "READY",
-        message: "100% Live Recon mode active (Zero Cache). Ready to audit target perimeter.",
+        message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
         status: "success",
       },
     ]);
@@ -329,7 +329,7 @@ export default function Home() {
           </div>
           <div>
             Target: <span className="text-[#6fb2f5] font-mono">{scanResult?.summary?.target || "Standing By"}</span> |{" "}
-            <span className="text-emerald-400">100% Live Multi-Engine Reconnaissance Active</span>
+            <span className="text-emerald-400">Non-Intrusive Hybrid EASM (Search Intel + RFC Telemetry)</span>
           </div>
         </div>
       </footer>

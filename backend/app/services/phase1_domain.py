@@ -204,18 +204,18 @@ class Phase1DomainScanner:
                         "engine": eng
                     })
 
-        # --- OSINT STEP 1: Live DNS & Mail Authentication Audit (SPF / DMARC / CAA) ---
+        # --- STEP 1: Light-Touch RFC Telemetry: Live DNS & Mail Authentication Audit (SPF / DMARC / CAA) ---
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="DNS_OSINT",
-            message=f"Executing DNS reconnaissance, mail security audit (SPF/DMARC), and CAA inspection for '{clean_target}'",
+            stage="RFC_TELEMETRY_DNS",
+            message=f"Executing light-touch RFC telemetry: DNS records, SPF/DMARC mail policies, and CAA inspection for '{clean_target}'",
             status="info"
         ))
         dns_intel, dns_findings = audit_dns_and_email_security(clean_target)
         if dns_intel.get("ips"):
             thoughts.append(AgentThought(
                 timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="DNS_MAPPED",
+                stage="RFC_TELEMETRY_MAPPED",
                 message=f"Resolved Apex IPs: {', '.join(dns_intel['ips'][:3])} | NS: {', '.join(dns_intel.get('nameservers', [])[:2])} | MX: {', '.join(dns_intel.get('mail_servers', [])[:2])}",
                 status="success"
             ))
@@ -228,11 +228,11 @@ class Phase1DomainScanner:
                 status="critical" if df.get("severity") in ["CRITICAL", "HIGH"] else "warning"
             ))
 
-        # --- OSINT STEP 2: Active Subdomain Probing Sweep ---
+        # --- STEP 2: Light-Touch Subdomain Resolution Sweep ---
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="SUBDOMAIN_SWEEP",
-            message=f"Executing threaded active DNS resolution across top corporate subdomains...",
+            message=f"Resolving standard RFC hostnames across corporate subdomains for perimeter baseline...",
             status="info"
         ))
         active_subs = probe_live_subdomains(clean_target)
@@ -242,15 +242,15 @@ class Phase1DomainScanner:
             thoughts.append(AgentThought(
                 timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
                 stage="SUBDOMAIN_DISCOVERY",
-                message=f"Active DNS sweep mapped {len(active_subs)} live infrastructure subdomains.",
+                message=f"Light-touch DNS resolution mapped {len(active_subs)} live infrastructure subdomains.",
                 status="success"
             ))
 
-        # --- OSINT STEP 3: HTTP Surface & Security Headers Audit ---
+        # --- STEP 3: HTTP Perimeter Telemetry & Security Headers Audit ---
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="HTTP_SECURITY_AUDIT",
-            message=f"Auditing HTTP headers, Content-Security-Policy (CSP), Anti-Clickjacking, and robots.txt on 'https://{clean_target}'",
+            stage="HTTP_TELEMETRY",
+            message=f"Inspecting public RFC HTTP headers, CSP, Anti-Clickjacking, and robots.txt on 'https://{clean_target}'",
             status="info"
         ))
         web_profile, http_vulns, http_assets = audit_http_surface_and_headers(clean_target)

@@ -7,7 +7,7 @@ interface SearchBarProps {
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
-  const [domain, setDomain] = useState("excalidraw.com");
+  const [domain, setDomain] = useState("reconflow.ai");
   const [enablePhase2, setEnablePhase2] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -33,7 +33,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="Enter target enterprise domain (e.g. excalidraw.com, stripe.com)"
+            placeholder="Enter target domain (e.g. reconflow.ai, yourcompany.com)"
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0f141c]/90 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-sm font-mono shadow-inner"
             disabled={isScanning}
           />
@@ -63,13 +63,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
           {/* Quick Target Button */}
           <button
             type="button"
-            onClick={() => handleQuickTarget("excalidraw.com")}
+            onClick={() => handleQuickTarget("reconflow.ai")}
             disabled={isScanning}
             className="px-4 py-3 rounded-xl bg-[#0f141c]/90 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-sky-300 font-medium text-xs shadow-md transition-all duration-150 active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
-            title="Scan live verified target excalidraw.com"
+            title="Scan verified domain reconflow.ai"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Target: excalidraw.com</span>
+            <span>Target: reconflow.ai</span>
           </button>
         </div>
       </form>
@@ -79,7 +79,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
             <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>100% Live Recon (Zero Cache)</span>
+            <span>Hybrid Recon (Passive Search + Light-Touch Telemetry)</span>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer select-none opacity-90 hover:opacity-100 transition">
