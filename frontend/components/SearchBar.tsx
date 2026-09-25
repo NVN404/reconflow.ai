@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Sparkles, Globe2, Radio } from "lucide-react";
+import { Search, Sparkles, Globe2, Radio, Zap, CheckCircle2 } from "lucide-react";
 
 interface SearchBarProps {
   onScan: (domain: string, enablePhase2: boolean) => void;
@@ -50,7 +50,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             {isScanning ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Sweeping 5 Engines...</span>
+                <span>Sweeping All Engines...</span>
               </>
             ) : (
               <>
@@ -75,8 +75,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
       </form>
 
       {/* Mode Controls */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-1">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-1 gap-2">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
             <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
             <span>100% Live Recon (Zero Cache)</span>
@@ -93,10 +93,30 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
           </label>
         </div>
 
-        <div className="font-mono text-[11px] text-slate-400">
-          Orchestration: <span className="text-cyan-400 font-semibold">5 SerpApi Engines Active</span>
+        <div className="flex items-center gap-3">
+          {/* 100% Pure SerpApi Engines Status */}
+          <div className="flex items-center gap-1.5 font-mono text-[11px] flex-wrap">
+            <span className="text-sky-400 font-semibold flex items-center gap-1 mr-1">
+              <Zap className="w-3 h-3 text-amber-400" />
+              SerpApi Engines:
+            </span>
+            {(["Google", "Bing", "DuckDuckGo", "YouTube", "Google News", "Google Play"] as const).map((engine) => (
+              <span
+                key={engine}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-950/40 border border-sky-800/40 text-sky-300 font-mono text-[10px]"
+              >
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                {engine}
+              </span>
+            ))}
+          </div>
+
+          <div className="font-mono text-[11px] text-slate-400 hidden xl:block">
+            Orchestration: <span className="text-cyan-400 font-semibold">6 SerpApi Engines (Pure Dorking)</span>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+

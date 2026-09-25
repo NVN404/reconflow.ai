@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldAlert,
   Download,
@@ -27,7 +27,7 @@ const initialScanResult: ScanResult = {
     security_score: 100,
     security_grade: "A",
     serpapi_credits_used: 0,
-    generated_at: new Date().toISOString(),
+    generated_at: "2026-09-24T00:00:00Z",
   },
   executive_summary: "ReconFlow AI Armed. Enter any enterprise domain (e.g. excalidraw.com) and click 'Execute Live Recon' to initiate real-time multi-engine reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
   nodes: [],
@@ -43,18 +43,37 @@ export default function Home() {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [thoughts, setThoughts] = useState<AgentThought[]>([
     {
-      timestamp: new Date().toLocaleTimeString("en-GB"),
+      timestamp: "READY",
       stage: "ARMED",
       message: "ReconFlow AI Multi-Engine Agent initialized (Google, Bing, DuckDuckGo, YouTube, Google Play).",
       status: "info",
     },
     {
-      timestamp: new Date().toLocaleTimeString("en-GB"),
+      timestamp: "READY",
       stage: "READY",
       message: "100% Live Recon mode active (Zero Cache). Ready to audit target perimeter.",
       status: "success",
     },
   ]);
+
+  // Sync client-side timestamp on mount to prevent SSR hydration mismatch
+  useEffect(() => {
+    const now = new Date().toLocaleTimeString("en-GB");
+    setThoughts([
+      {
+        timestamp: now,
+        stage: "ARMED",
+        message: "ReconFlow AI Multi-Engine Agent initialized (Google, Bing, DuckDuckGo, YouTube, Google Play).",
+        status: "info",
+      },
+      {
+        timestamp: now,
+        stage: "READY",
+        message: "100% Live Recon mode active (Zero Cache). Ready to audit target perimeter.",
+        status: "success",
+      },
+    ]);
+  }, []);
 
   // Handle Graph Layout Direction Toggle
   const handleToggleLayout = () => {
@@ -166,14 +185,38 @@ export default function Home() {
     nodes
       .filter((n) => n.type === "findingNode" || n.type === "externalNode")
       .forEach((n, idx) => {
-        md += `### ${idx + 1}. [${n.data.severity}] ${n.data.label}\n`;
-        md += `- **Surface:** ${n.data.surface}\n`;
-        md += `- **URL:** ${n.data.metadata.url}\n`;
-        md += `- **Dork Used:** \`${n.data.metadata.dork_used}\`\n`;
-        if (n.data.owasp_tag) md += `- **OWASP:** ${n.data.owasp_tag}\n`;
-        if (n.data.cwe_id) md += `- **CWE:** ${n.data.cwe_id}\n`;
-        md += `- **Google Snippet Context:** *${n.data.metadata.snippet}*\n\n`;
-        md += `**Actionable Remediation:**\n\`\`\`bash\n${n.data.remediation || "Isolate endpoint and restrict permissions."}\n\`\`\`\n\n---\n\n`;
+        md += `### ${idx + 1}. [${n.data.severity}] ${n.data.label}\n\n`;
+        md += `- **Section:** ${n.data.section === "VULNERABILITY" ? "🚨 Active Vulnerability Perimeter" : "🛡️ Perimeter Assets & Intelligence"}\n`;
+        md += `- **Surface Category:** ${n.data.surface} (${n.data.category})\n`;
+        md += `- **Target Endpoint:** ${n.data.metadata.url}\n`;
+        md += `- **Search Engine Dork Operator:** \`${n.data.metadata.dork_used}\`\n`;
+        if (n.data.cvss_score) md += `- **CVSS Severity Rating:** ${n.data.cvss_score}\n`;
+        if (n.data.owasp_tag) md += `- **OWASP Standard:** ${n.data.owasp_tag}\n`;
+        if (n.data.cwe_id) md += `- **CWE Classification:** ${n.data.cwe_id}\n`;
+        md += `\n`;
+
+        if (n.data.what_is_the_bug) {
+          md += `#### Executive Issue Summary\n${n.data.what_is_the_bug}\n\n`;
+        }
+
+        if (n.data.why_it_is_a_bug) {
+          md += `#### Threat Analysis: Why This Is a Security Risk\n${n.data.why_it_is_a_bug}\n\n`;
+        }
+
+        if (n.data.attack_vector) {
+          md += `#### Adversary Attack Vector\n\`\`\`text\n${n.data.attack_vector}\n\`\`\`\n\n`;
+        }
+
+        md += `#### Extracted Evidence & Context\n> ${n.data.metadata.snippet || "Discovered via automated reconnaissance sweep."}\n\n`;
+
+        md += `#### Defensive Remediation: How to Fix\n`;
+        md += `${n.data.how_to_fix || n.data.remediation || "Isolate endpoint and enforce access boundaries."}\n\n`;
+
+        if (n.data.remediation_steps && n.data.remediation_steps.length > 0) {
+          md += `**Remediation Action Items:**\n\`\`\`bash\n${n.data.remediation_steps.join("\n\n")}\n\`\`\`\n\n`;
+        }
+
+        md += `---\n\n`;
       });
 
     const blob = new Blob([md], { type: "text/markdown" });

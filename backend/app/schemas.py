@@ -19,6 +19,13 @@ class NodeData(BaseModel):
     triage_classification: Optional[str] = None
     owasp_tag: Optional[str] = None
     cwe_id: Optional[str] = None
+    cvss_score: Optional[str] = None
+    what_is_the_bug: Optional[str] = None
+    why_it_is_a_bug: Optional[str] = None
+    attack_vector: Optional[str] = None
+    how_to_fix: Optional[str] = None
+    remediation_steps: Optional[List[str]] = None
+    evidence_details: Optional[Dict[str, str]] = None
     remediation: Optional[str] = None
     metadata: FindingMetadata
 

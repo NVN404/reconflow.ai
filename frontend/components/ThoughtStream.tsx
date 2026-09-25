@@ -55,7 +55,7 @@ export const ThoughtStream: React.FC<ThoughtStreamProps> = ({ thoughts, isScanni
           ) : (
             thoughts.map((item, idx) => (
               <div key={idx} className="flex items-start gap-2.5 leading-normal">
-                <span className="text-xs text-slate-500 font-mono select-none mt-0.5">
+                <span className="text-xs text-slate-500 font-mono select-none mt-0.5" suppressHydrationWarning>
                   [{item.timestamp}]
                 </span>
                 <span className="mt-0.5">{getStatusIcon(item.status)}</span>

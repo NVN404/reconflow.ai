@@ -6,13 +6,22 @@ export type FindingCategory =
   | "API_DOCS"
   | "CONFIG_LEAK"
   | "GITHUB_LEAK"
+  | "GITHUB_REPO"
   | "S3_LEAK"
   | "NEWS_BREACH"
   | "TOKEN_LEAK"
   | "DOCUMENT_LEAK"
   | "YOUTUBE_POC"
   | "MOBILE_APP"
-  | "VULN_STATUS_CLEAN";
+  | "RESOURCE"
+  | "BRAND_PRESENCE"
+  | "SECURITY_HEADERS"
+  | "EMAIL_SECURITY"
+  | "DNS_CAA_MISSING"
+  | "EXPOSED_API_SCHEMA"
+  | "DISALLOWED_ENDPOINT"
+  | "VULN_STATUS_CLEAN"
+  | string;
 
 export type FindingOrigin = "INTERNAL" | "EXTERNAL";
 
@@ -30,11 +39,18 @@ export interface NodeData extends Record<string, unknown> {
   origin: FindingOrigin;
   surface: string;
   engine?: string;
-  section?: "INFO" | "VULNERABILITY";
+  section?: "INFO" | "VULNERABILITY" | "RESOURCE";
   triage_reason?: string;
   triage_classification?: string;
   owasp_tag?: string;
   cwe_id?: string;
+  cvss_score?: string;
+  what_is_the_bug?: string;
+  why_it_is_a_bug?: string;
+  attack_vector?: string;
+  how_to_fix?: string;
+  remediation_steps?: string[];
+  evidence_details?: Record<string, string>;
   remediation?: string;
   metadata: FindingMetadata;
 }

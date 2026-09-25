@@ -59,3 +59,25 @@ def get_category_remediation(category: str):
     if cat_upper in REMEDIATION_PLAYBOOKS:
         return REMEDIATION_PLAYBOOKS[cat_upper]
     raise HTTPException(status_code=404, detail="Category not found.")
+
+@app.get("/api/toolchain")
+@app.get("/api/engines")
+def toolchain_status():
+    """Report active SerpApi reconnaissance engines (100% Pure SerpApi Intelligence)."""
+    engines = {
+        "Google": True,
+        "Bing": True,
+        "DuckDuckGo": True,
+        "YouTube": True,
+        "Google News": True,
+        "Google Play": True,
+    }
+    return {
+        "engines": engines,
+        "tools": engines,
+        "mode": "100% Pure SerpApi Intelligence",
+        "active_count": len(engines),
+        "pipeline_ready": True,
+        "pipeline_tools": list(engines.keys()),
+    }
+

@@ -9,6 +9,107 @@ from app.config import SERPAPI_KEY, get_serpapi_key
 from app.cache import get_cached_scan, set_cached_scan
 from app.schemas import ScanResult, ScanSummary, AgentThought
 from app.services.triage import compute_security_score, build_executive_summary, layout_graph, ai_triage_findings
+from app.remediation import get_remediation_for_category
+from app.services.osint_scanner import (
+    audit_dns_and_email_security,
+    probe_live_subdomains,
+    audit_http_surface_and_headers
+)
+
+def is_valid_config_leak(link: str, title: str, snippet: str) -> Tuple[bool, str]:
+    """
+    Returns (is_leak, leak_title).
+    Strictly verifies that the URL or content points to a REAL sensitive file or directory listing.
+    Standard web pages (careers, blog, marketing, docs, etc.) are NEVER leaks.
+    """
+    parsed = urlparse(link)
+    path = parsed.path.lower()
+    t_lower = title.lower()
+    s_lower = snippet.lower()
+    
+    # 1. Reject normal web pages immediately
+    normal_sections = [
+        "/careers", "/jobs", "/blog", "/about", "/pricing", "/faq", "/help", 
+        "/support", "/contact", "/terms", "/privacy", "/features", "/integrations", 
+        "/customers", "/solutions", "/resources", "/press", "/articles", "/status",
+        "/forum", "/community", "/docs", "/documentation", "/products", "/case-studies",
+        "/amazon-filters", "/inline-videos", "/shopping-results", "/google-domains",
+        "/apple-languages", "/broaden-searches"
+    ]
+    if any(path == sec or path.startswith(sec + "/") or path.endswith(sec) for sec in normal_sections):
+        return False, ""
+        
+    # 2. Open Directory Listing
+    if "index of /" in t_lower or "index of /" in s_lower or "parent directory" in s_lower:
+        return True, "Open Directory Listing Exposing Server Files"
+        
+    # 3. Environment configuration files
+    if "/.env" in path or path.endswith(".env") or path.endswith(".env.local") or path.endswith(".env.production"):
+        return True, "Exposed Environment Configuration (.env) File"
+        
+    # 4. Dotfiles (.git/config, .aws/credentials, .htpasswd, etc.)
+    segments = [s for s in path.split("/") if s]
+    if any(s.startswith(".") and len(s) > 1 and not s.startswith((".html", ".php", ".htm", ".json", ".js", ".css")) for s in segments):
+        return True, "Exposed Server Dotfile / Hidden Configuration"
+        
+    # 5. Database dumps, logs, backups
+    sensitive_exts = [".sql", ".bak", ".sqlite", ".db", ".dump", ".backup", ".log", ".conf", ".cfg", ".ini"]
+    for ext in sensitive_exts:
+        if path.endswith(ext) or f"{ext}." in path:
+            return True, f"Exposed Database / Server Backup File ({ext})"
+            
+    return False, ""
+
+def is_valid_token_leak(link: str, snippet: str) -> Tuple[bool, str, str]:
+    """Returns (is_leak, token_type, matched_sig)"""
+    url_lower = link.lower()
+    if any(x in url_lower for x in ["/docs", "/tutorial", "/guide", "/example", "/faq", "/blog", "/sdk", "/learn"]):
+        return False, "", ""
+    combined = snippet + " " + link
+    aws_m = re.search(r"\b(AKIA[0-9A-Z]{16})\b", combined)
+    if aws_m:
+        return True, "AWS Access Key ID", aws_m.group(1)
+    gh_m = re.search(r"\b(ghp_[A-Za-z0-9]{36})\b", combined)
+    if gh_m:
+        return True, "GitHub Personal Access Token", gh_m.group(1)
+    stripe_m = re.search(r"\b(sk_live_[0-9a-zA-Z]{24,})\b", combined)
+    if stripe_m:
+        return True, "Stripe Live Secret Key", stripe_m.group(1)
+    google_m = re.search(r"\b(AIzaSy[0-9A-Za-z-_]{33,35})\b", combined)
+    if google_m and not any(w in snippet.lower() for w in ["your_key", "example", "placeholder"]):
+        return True, "Google Cloud API Key", google_m.group(1)
+    return False, "", ""
+
+def is_valid_document_leak(link: str, title: str, snippet: str) -> Tuple[bool, str]:
+    """Returns (is_leak, doc_title)"""
+    parsed = urlparse(link)
+    path = parsed.path.lower()
+    valid_exts = [".pdf", ".xlsx", ".xls", ".docx", ".doc", ".csv"]
+    if not any(path.endswith(ext) for ext in valid_exts):
+        return False, ""
+    combined = (title + " " + snippet).lower()
+    conf_markers = ["confidential", "internal use only", "strictly private", "proprietary", "not for public"]
+    if any(m in combined for m in conf_markers):
+        ext = path.split(".")[-1].upper()
+        return True, f"Indexed Confidential Corporate {ext} Document"
+    return False, ""
+
+def is_valid_auth_gateway(link: str) -> Tuple[bool, str]:
+    """Returns (is_gateway, gateway_title)"""
+    parsed = urlparse(link)
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    
+    auth_subdomains = ("admin.", "login.", "auth.", "portal.", "dashboard.", "sso.", "id.", "accounts.")
+    if host.startswith(auth_subdomains):
+        return True, "Dedicated Authentication / Admin Subdomain"
+        
+    auth_paths = ["/login", "/admin", "/auth", "/dashboard", "/portal", "/signin", "/sso", "/user/login", "/admin/login"]
+    if any(path == p or path.startswith(p + "/") for p in auth_paths):
+        if not any(x in path for x in ["/blog", "/docs", "/article", "/posts", "/news", "/careers"]):
+            return True, "Public Authentication Gateway"
+            
+    return False, ""
 
 class Phase1DomainScanner:
     def __init__(self, api_key: str = ""):
@@ -103,6 +204,67 @@ class Phase1DomainScanner:
                         "engine": eng
                     })
 
+        # --- OSINT STEP 1: Live DNS & Mail Authentication Audit (SPF / DMARC / CAA) ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="DNS_OSINT",
+            message=f"Executing DNS reconnaissance, mail security audit (SPF/DMARC), and CAA inspection for '{clean_target}'",
+            status="info"
+        ))
+        dns_intel, dns_findings = audit_dns_and_email_security(clean_target)
+        if dns_intel.get("ips"):
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="DNS_MAPPED",
+                message=f"Resolved Apex IPs: {', '.join(dns_intel['ips'][:3])} | NS: {', '.join(dns_intel.get('nameservers', [])[:2])} | MX: {', '.join(dns_intel.get('mail_servers', [])[:2])}",
+                status="success"
+            ))
+        for df in dns_findings:
+            findings.append(df)
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PERIMETER_ANOMALY" if df.get("severity") in ["CRITICAL", "HIGH"] else "PERIMETER_NOTICE",
+                message=f"DNS {df.get('severity')} finding: {df.get('title')}",
+                status="critical" if df.get("severity") in ["CRITICAL", "HIGH"] else "warning"
+            ))
+
+        # --- OSINT STEP 2: Active Subdomain Probing Sweep ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="SUBDOMAIN_SWEEP",
+            message=f"Executing threaded active DNS resolution across top corporate subdomains...",
+            status="info"
+        ))
+        active_subs = probe_live_subdomains(clean_target)
+        for sub in active_subs:
+            register_host(sub["host"], sub["url"], sub["snippet"], sub["dork"], sub["engine"])
+        if active_subs:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="SUBDOMAIN_DISCOVERY",
+                message=f"Active DNS sweep mapped {len(active_subs)} live infrastructure subdomains.",
+                status="success"
+            ))
+
+        # --- OSINT STEP 3: HTTP Surface & Security Headers Audit ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="HTTP_SECURITY_AUDIT",
+            message=f"Auditing HTTP headers, Content-Security-Policy (CSP), Anti-Clickjacking, and robots.txt on 'https://{clean_target}'",
+            status="info"
+        ))
+        web_profile, http_vulns, http_assets = audit_http_surface_and_headers(clean_target)
+        for hv in http_vulns:
+            findings.append(hv)
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="HEADER_DEFECT",
+                message=f"Security Header {hv.get('severity')} Risk: {hv.get('title')}",
+                status="critical" if hv.get("severity") in ["CRITICAL", "HIGH"] else "warning"
+            ))
+        for ha in http_assets:
+            findings.append(ha)
+
         # --- PASS 1.1: Subdomain Harvesting via Google ---
         pass1_query = f"site:*.{clean_target} -www.{clean_target}"
         thoughts.append(AgentThought(
@@ -178,10 +340,12 @@ class Phase1DomainScanner:
                 
                 # Check for specific gateway exposures
                 if host == clean_target or host.endswith("." + clean_target):
+                    is_auth, auth_title = is_valid_auth_gateway(link)
                     url_lower = link.lower()
-                    if any(k in url_lower for k in ["admin", "login", "auth", "portal", "dashboard"]):
+                    if is_auth:
+                        playbook = get_remediation_for_category("INFRASTRUCTURE")
                         findings.append({
-                            "title": "Public Authentication / Admin Gateway",
+                            "title": auth_title,
                             "category": "INFRASTRUCTURE",
                             "severity": "LOW",
                             "host": host,
@@ -189,11 +353,20 @@ class Phase1DomainScanner:
                             "snippet": res.get("snippet", "Exposed public login / access portal."),
                             "dork": pass2_query,
                             "surface": "Authentication Gateway",
-                            "engine": "google"
+                            "engine": "google",
+                            "what_is_the_bug": f"Publicly accessible authentication or administrative gateway at {link}.",
+                            "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                            "attack_vector": playbook.get("attack_vector"),
+                            "how_to_fix": playbook.get("how_to_fix"),
+                            "remediation": playbook.get("default_directive"),
+                            "owasp_tag": playbook.get("owasp_tag"),
+                            "cwe_id": playbook.get("cwe_id"),
+                            "cvss_score": playbook.get("cvss_score")
                         })
-                    elif any(k in url_lower for k in ["docs", "api", "swagger", "graphiql", "redoc"]):
+                    elif any(k in url_lower for k in ["swagger", "graphiql", "redoc", "openapi"]) and not any(x in url_lower for x in ["/blog", "/careers", "/news", "/posts"]):
+                        playbook = get_remediation_for_category("API_DOCS")
                         findings.append({
-                            "title": "Public API & Documentation Portal",
+                            "title": "Interactive API Documentation Schema Endpoint",
                             "category": "API_DOCS",
                             "severity": "MEDIUM",
                             "host": host,
@@ -201,8 +374,56 @@ class Phase1DomainScanner:
                             "snippet": res.get("snippet", "Interactive developer schema exposing endpoints."),
                             "dork": pass2_query,
                             "surface": "Interactive Documentation",
-                            "engine": "google"
+                            "engine": "google",
+                            "what_is_the_bug": f"Publicly accessible interactive API specification console at {link}.",
+                            "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                            "attack_vector": playbook.get("attack_vector"),
+                            "how_to_fix": playbook.get("how_to_fix"),
+                            "remediation": playbook.get("default_directive"),
+                            "owasp_tag": playbook.get("owasp_tag"),
+                            "cwe_id": playbook.get("cwe_id"),
+                            "cvss_score": playbook.get("cvss_score")
                         })
+
+        # --- PASS 1.2B: General Web Attack Surface & Indexed Routes ---
+        general_query = f"site:{clean_target}"
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="PASS_1_2B",
+            message=f"Harvesting indexed web perimeter and endpoints: '{general_query}'",
+            status="info"
+        ))
+        gen_results, gen_err = self.execute_serpapi_query(general_query, engine="google")
+        if not gen_err and gen_results:
+            credits_used += 1
+            for res in gen_results:
+                link = res.get("link", "")
+                host = urlparse(link).netloc.lower()
+                register_host(host, link, res.get("snippet", "Discovered host cluster."), general_query, "google")
+                title = res.get("title", "")
+                if title and not any(f.get("url") == link for f in findings):
+                    findings.append({
+                        "title": f"Indexed Asset: {title[:50]}",
+                        "category": "INFRASTRUCTURE",
+                        "severity": "INFO",
+                        "host": host,
+                        "url": link,
+                        "snippet": res.get("snippet", "Active indexed page on target perimeter."),
+                        "dork": general_query,
+                        "surface": "Web Application Perimeter",
+                        "engine": "google",
+                        "section": "INFO",
+                        "what_is_the_bug": f"Publicly accessible indexed endpoint at {link}.",
+                        "why_it_is_a_bug": "Public web routes form the external attack surface of the application.",
+                        "attack_vector": "Adversary explores indexed endpoints to map application functionality and business logic.",
+                        "how_to_fix": "Verify that this route is intended for public consumption and enforce rate limiting.",
+                        "remediation": "Audit route access controls and ensure sensitive APIs require authenticated sessions.",
+                        "owasp_tag": "OWASP A01:2021 — Broken Access Control",
+                        "cwe_id": "CWE-200: Information Exposure",
+                        "cvss_score": "0.0 (Informational)"
+                    })
+                    if len([f for f in findings if f.get("category") == "INFRASTRUCTURE" and f.get("severity") == "INFO"]) >= 5:
+                        break
 
         # --- PASS 1.3: Sensitive Configuration Files & Database Dumps ---
         pass3_query = f"site:{clean_target} (filetype:env OR filetype:sql OR filetype:yaml OR filetype:log OR filetype:bak OR intitle:\"index of /\")"
@@ -213,30 +434,47 @@ class Phase1DomainScanner:
             status="info"
         ))
         p3_results, p3_err = self.execute_serpapi_query(pass3_query, engine="google")
-        if not p3_err:
+        if not p3_err and p3_results:
             credits_used += 1
             for res in p3_results:
                 link = res.get("link", "")
                 host = urlparse(link).netloc.lower()
-                if host == clean_target or host.endswith("." + clean_target):
-                    is_env = ".env" in link
-                    findings.append({
-                        "title": "Exposed Configuration .env File" if is_env else "Sensitive Database / Log Backup",
-                        "category": "CONFIG_LEAK",
-                        "severity": "CRITICAL",
-                        "host": host,
-                        "url": link,
-                        "snippet": res.get("snippet", "Production secrets or configuration files exposed."),
-                        "dork": pass3_query,
-                        "surface": "Web Server Root",
-                        "engine": "google"
-                    })
-                    thoughts.append(AgentThought(
-                        timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                        stage="CRITICAL_ANOMALY",
-                        message=f"CRITICAL leak detected: {link}",
-                        status="critical"
-                    ))
+                if not (host == clean_target or host.endswith("." + clean_target)):
+                    continue
+                snippet = res.get("snippet", "")
+                title = res.get("title", "")
+                
+                is_leak, leak_title = is_valid_config_leak(link, title, snippet)
+                if not is_leak:
+                    # STRICT FILTER: Discard normal pages (careers, blog, marketing, status, etc.)
+                    continue
+                
+                playbook = get_remediation_for_category("CONFIG_LEAK")
+                findings.append({
+                    "title": leak_title,
+                    "category": "CONFIG_LEAK",
+                    "severity": "CRITICAL",
+                    "host": host,
+                    "url": link,
+                    "snippet": snippet or "Production secrets or configuration files exposed.",
+                    "dork": pass3_query,
+                    "surface": "Web Server Root",
+                    "engine": "google",
+                    "what_is_the_bug": f"Unauthenticated public access to sensitive file at {link}.",
+                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                    "attack_vector": playbook.get("attack_vector"),
+                    "how_to_fix": playbook.get("how_to_fix"),
+                    "remediation": playbook.get("default_directive"),
+                    "owasp_tag": playbook.get("owasp_tag"),
+                    "cwe_id": playbook.get("cwe_id"),
+                    "cvss_score": playbook.get("cvss_score")
+                })
+                thoughts.append(AgentThought(
+                    timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                    stage="CRITICAL_ANOMALY",
+                    message=f"CRITICAL leak confirmed: {link} ({leak_title})",
+                    status="critical"
+                ))
 
         # --- PASS 1.4: Leaked Token Signature Scanning (TruffleHog in Search) ---
         token_query = f"site:{clean_target} (\"AIzaSy\" OR \"sk_live_\" OR \"ghp_\" OR \"AKIA\")"
@@ -252,32 +490,42 @@ class Phase1DomainScanner:
             for res in token_results:
                 link = res.get("link", "")
                 host = urlparse(link).netloc.lower()
-                if host == clean_target or host.endswith("." + clean_target):
-                    snip = res.get("snippet", "")
-                    matched_sig = "API Key"
-                    for sig in ["AIzaSy", "sk_live_", "ghp_", "AKIA"]:
-                        if sig in snip or sig in link:
-                            matched_sig = sig
-                            break
-                    findings.append({
-                        "title": f"Exposed Cloud Secret / Token Signature ({matched_sig})",
-                        "category": "TOKEN_LEAK",
-                        "severity": "CRITICAL",
-                        "host": host,
-                        "url": link,
-                        "snippet": snip or "Hardcoded API key signature detected in public endpoint.",
-                        "dork": token_query,
-                        "surface": "Web Client Bundle / Source",
-                        "engine": "google"
-                    })
-                    thoughts.append(AgentThought(
-                        timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                        stage="CRITICAL_ANOMALY",
-                        message=f"CRITICAL Token signature detected on {host}: {matched_sig}",
-                        status="critical"
-                    ))
-                    if len([f for f in findings if f["category"] == "TOKEN_LEAK"]) >= 3:
-                        break
+                if not (host == clean_target or host.endswith("." + clean_target)):
+                    continue
+                snip = res.get("snippet", "")
+                
+                is_token, token_type, matched_sig = is_valid_token_leak(link, snip)
+                if not is_token:
+                    continue
+
+                playbook = get_remediation_for_category("TOKEN_LEAK")
+                findings.append({
+                    "title": f"Exposed Cloud Secret Signature ({token_type})",
+                    "category": "TOKEN_LEAK",
+                    "severity": "CRITICAL",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or f"Hardcoded {token_type} signature detected: {matched_sig}",
+                    "dork": token_query,
+                    "surface": "Web Client Bundle / Source",
+                    "engine": "google",
+                    "what_is_the_bug": f"Live high-entropy {token_type} signature detected in public endpoint at {link}.",
+                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                    "attack_vector": playbook.get("attack_vector"),
+                    "how_to_fix": playbook.get("how_to_fix"),
+                    "remediation": playbook.get("default_directive"),
+                    "owasp_tag": playbook.get("owasp_tag"),
+                    "cwe_id": playbook.get("cwe_id"),
+                    "cvss_score": playbook.get("cvss_score")
+                })
+                thoughts.append(AgentThought(
+                    timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                    stage="CRITICAL_ANOMALY",
+                    message=f"CRITICAL Token signature detected on {host}: {token_type} ({matched_sig[:10]}...)",
+                    status="critical"
+                ))
+                if len([f for f in findings if f["category"] == "TOKEN_LEAK"]) >= 3:
+                    break
 
         # --- PASS 1.5: Confidential Corporate Documents (filetype:pdf / xlsx) ---
         doc_query = f"site:{clean_target} (filetype:pdf OR filetype:xlsx OR filetype:docx) (\"CONFIDENTIAL\" OR \"INTERNAL USE ONLY\" OR \"PROPRIETARY\")"
@@ -293,20 +541,37 @@ class Phase1DomainScanner:
             for res in doc_results:
                 link = res.get("link", "")
                 host = urlparse(link).netloc.lower()
-                if host == clean_target or host.endswith("." + clean_target):
-                    findings.append({
-                        "title": "Indexed Confidential Corporate Document",
-                        "category": "DOCUMENT_LEAK",
-                        "severity": "HIGH",
-                        "host": host,
-                        "url": link,
-                        "snippet": res.get("snippet", "Internal corporate document exposed to public crawlers."),
-                        "dork": doc_query,
-                        "surface": "Internal Corporate Document",
-                        "engine": "google"
-                    })
-                    if len([f for f in findings if f["category"] == "DOCUMENT_LEAK"]) >= 3:
-                        break
+                if not (host == clean_target or host.endswith("." + clean_target)):
+                    continue
+                snip = res.get("snippet", "")
+                title = res.get("title", "")
+                
+                is_doc, doc_title = is_valid_document_leak(link, title, snip)
+                if not is_doc:
+                    continue
+
+                playbook = get_remediation_for_category("DOCUMENT_LEAK")
+                findings.append({
+                    "title": doc_title,
+                    "category": "DOCUMENT_LEAK",
+                    "severity": "HIGH",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or "Internal corporate document exposed to public crawlers.",
+                    "dork": doc_query,
+                    "surface": "Internal Corporate Document",
+                    "engine": "google",
+                    "what_is_the_bug": f"Publicly accessible internal document with confidentiality markings at {link}.",
+                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                    "attack_vector": playbook.get("attack_vector"),
+                    "how_to_fix": playbook.get("how_to_fix"),
+                    "remediation": playbook.get("default_directive"),
+                    "owasp_tag": playbook.get("owasp_tag"),
+                    "cwe_id": playbook.get("cwe_id"),
+                    "cvss_score": playbook.get("cvss_score")
+                })
+                if len([f for f in findings if f["category"] == "DOCUMENT_LEAK"]) >= 3:
+                    break
 
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
@@ -351,6 +616,7 @@ class Phase1DomainScanner:
                         and not is_doc_or_example
                         and not has_dummy_template
                     )
+                    playbook = get_remediation_for_category("GITHUB_LEAK")
                     external_findings.append({
                         "title": "Exposed Repository Secret Reference" if is_secret else "Public Repository Reference",
                         "category": "GITHUB_LEAK",
@@ -359,11 +625,89 @@ class Phase1DomainScanner:
                         "snippet": snip or "GitHub repository referencing brand API credentials.",
                         "dork": gh_query,
                         "surface": "GitHub Repository",
-                        "engine": "google"
+                        "engine": "google",
+                        "what_is_the_bug": f"Public GitHub repository referencing brand assets or credentials at {link}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score") if is_secret else "CVSS 3.0 (Low)"
                     })
 
                     if len([f for f in external_findings if f["category"] == "GITHUB_LEAK"]) >= 3:
                         break
+
+            # Pass 2.1B: GitHub Open Source & Ecosystem Integrations OSINT
+            gh_repo_query = f"site:github.com \"{brand_name}\""
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PASS_2_1B",
+                message=f"Harvesting public GitHub repositories & ecosystem tools: '{gh_repo_query}'",
+                status="info"
+            ))
+            gh_repo_res, gh_repo_err = self.execute_serpapi_query(gh_repo_query, engine="google")
+            if not gh_repo_err and gh_repo_res:
+                credits_used += 1
+                for res in gh_repo_res[:4]:
+                    link = res.get("link", "")
+                    if any(f.get("url") == link for f in external_findings):
+                        continue
+                    playbook = get_remediation_for_category("GITHUB_REPO")
+                    external_findings.append({
+                        "title": f"GitHub Repo: {res.get('title', 'Open Source Tool')[:50]}",
+                        "category": "GITHUB_REPO",
+                        "severity": "LOW",
+                        "url": link,
+                        "snippet": res.get("snippet", "Public GitHub repository mentioning target brand."),
+                        "dork": gh_repo_query,
+                        "surface": "GitHub Open Source",
+                        "engine": "google",
+                        "section": "INFO",
+                        "what_is_the_bug": f"Public open-source repository or integration code referencing {brand_name} at {link}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
+                    })
+
+            # Pass 2.1C: Pastebin & Public Gist Leak Sweep
+            paste_query = f"(site:pastebin.com OR site:gist.github.com) (\"{clean_target}\" OR \"{brand_name}\")"
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PASS_2_1C",
+                message=f"Auditing paste sites & public gists for leaked snippets: '{paste_query}'",
+                status="info"
+            ))
+            paste_res, paste_err = self.execute_serpapi_query(paste_query, engine="google")
+            if not paste_err and paste_res:
+                credits_used += 1
+                for res in paste_res[:2]:
+                    link = res.get("link", "")
+                    playbook = get_remediation_for_category("CONFIG_LEAK")
+                    external_findings.append({
+                        "title": f"Public Paste Snippet: {res.get('title', 'Leaked Pastebin Record')[:50]}",
+                        "category": "CONFIG_LEAK",
+                        "severity": "HIGH",
+                        "url": link,
+                        "snippet": res.get("snippet", "Public pastebin or gist snippet referencing target domain."),
+                        "dork": paste_query,
+                        "surface": "Pastebin / Gist Leak",
+                        "engine": "google",
+                        "section": "VULNERABILITY",
+                        "what_is_the_bug": f"Public code paste referencing {clean_target} at {link}.",
+                        "why_it_is_a_bug": "Adversaries paste extracted database records, configurations, or tokens to pastebin services.",
+                        "attack_vector": "Attacker exfiltrates internal credentials or server dumps to public pastebin services.",
+                        "how_to_fix": "Request immediate removal of paste and rotate any referenced credentials.",
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
+                    })
 
             # Pass 2.2: Brand-Owned Cloud Storage Buckets (S3 / GCS)
             s3_query = f"(site:s3.amazonaws.com/{brand_name} OR site:storage.googleapis.com/{brand_name} OR site:*.s3.amazonaws.com \"{clean_target}\")"
@@ -385,6 +729,7 @@ class Phase1DomainScanner:
                     if brand_name not in host and not path.startswith(f"/{brand_name}") and clean_target not in link.lower():
                         continue
                     is_leak = any(ext in link.lower() for ext in [".sql", ".env", ".bak", ".csv", ".json", ".zip", ".tar"])
+                    playbook = get_remediation_for_category("S3_LEAK")
                     external_findings.append({
                         "title": "Public Cloud Storage Bucket Exposure" if is_leak else "Public Cloud Storage Asset",
                         "category": "S3_LEAK",
@@ -393,10 +738,54 @@ class Phase1DomainScanner:
                         "snippet": res.get("snippet", "Cloud storage object."),
                         "dork": s3_query,
                         "surface": "AWS S3 / Cloud Storage",
-                        "engine": "google"
+                        "engine": "google",
+                        "what_is_the_bug": f"Public cloud object store accessible at {link}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score") if is_leak else "CVSS 3.0 (Low)"
                     })
                     if len([f for f in external_findings if f["category"] == "S3_LEAK"]) >= 3:
                         break
+
+            # Pass 2.2B: External Web Footprint, Marketplace & Directory Mentions
+            fp_query = f"\"{clean_target}\" -site:{clean_target}"
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="PASS_2_2B_FOOTPRINT",
+                message=f"Mapping third-party directories, tool catalogs & brand footprint: '{fp_query}'",
+                status="info"
+            ))
+            fp_res, fp_err = self.execute_serpapi_query(fp_query, engine="google")
+            if not fp_err and fp_res:
+                credits_used += 1
+                for res in fp_res[:4]:
+                    link = res.get("link", "")
+                    if any(f.get("url") == link for f in external_findings):
+                        continue
+                    playbook = get_remediation_for_category("BRAND_PRESENCE")
+                    external_findings.append({
+                        "title": f"Directory / Web Asset: {res.get('title', 'Third-Party Mention')[:55]}",
+                        "category": "BRAND_PRESENCE",
+                        "severity": "INFO",
+                        "url": link,
+                        "snippet": res.get("snippet", "External web directory or tool catalog entry."),
+                        "dork": fp_query,
+                        "surface": "External Web Footprint",
+                        "engine": "google",
+                        "section": "INFO",
+                        "what_is_the_bug": f"Third-party directory listing or web mention referencing {clean_target}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
+                    })
 
             # Pass 2.3: Threat Intelligence & Security Bulletins (INFORMATIONAL ONLY, NOT A BUG)
             news_query = f"\"{brand_name}\" (security OR vulnerability OR breach OR exploit OR incident)"
@@ -410,6 +799,7 @@ class Phase1DomainScanner:
             if not news_err:
                 credits_used += 1
                 for res in news_results[:3]:
+                    playbook = get_remediation_for_category("NEWS_BREACH")
                     external_findings.append({
                         "title": res.get("title", "Threat Intelligence Advisory"),
                         "category": "NEWS_BREACH",
@@ -418,7 +808,15 @@ class Phase1DomainScanner:
                         "snippet": res.get("snippet", "Security news bulletin regarding target ecosystem."),
                         "dork": news_query,
                         "surface": "Threat Intelligence News",
-                        "engine": "google_news"
+                        "engine": "google_news",
+                        "what_is_the_bug": f"External threat intelligence bulletin referencing {brand_name}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
                     })
 
             # Pass 2.4: YouTube Live Exploit & Bug Bounty Radar
@@ -453,6 +851,7 @@ class Phase1DomainScanner:
                     views = vid.get("views", "N/A")
                     pub_date = vid.get("published_date", "")
 
+                    playbook = get_remediation_for_category("YOUTUBE_POC")
                     external_findings.append({
                         "title": v_title[:65],
                         "category": "YOUTUBE_POC",
@@ -461,7 +860,15 @@ class Phase1DomainScanner:
                         "snippet": f"Channel: {channel_name} | Views: {views} | {pub_date}. {v_snip}"[:250],
                         "dork": yt_query,
                         "surface": "YouTube Exploit Radar",
-                        "engine": "youtube"
+                        "engine": "youtube",
+                        "what_is_the_bug": f"Researcher exploit demonstration video referencing {brand_name}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": playbook.get("attack_vector"),
+                        "how_to_fix": playbook.get("how_to_fix"),
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
                     })
                     if len([f for f in external_findings if f["category"] == "YOUTUBE_POC"]) >= 3:
                         break
@@ -485,6 +892,7 @@ class Phase1DomainScanner:
                     if brand_name in pkg_id.lower() or brand_name in app_title.lower():
                         dev = app.get("developer", "N/A")
                         rating = app.get("rating", "N/A")
+                        playbook = get_remediation_for_category("MOBILE_APP")
                         external_findings.append({
                             "title": f"Mobile Client: {app_title}",
                             "category": "MOBILE_APP",
@@ -493,7 +901,15 @@ class Phase1DomainScanner:
                             "snippet": f"Package: {pkg_id} | Rating: {rating}★ | Developer: {dev}",
                             "dork": f"engine:google_play q={play_query}",
                             "surface": "Google Play Store",
-                            "engine": "google_play"
+                            "engine": "google_play",
+                            "what_is_the_bug": f"Published mobile application perimeter asset ({pkg_id}).",
+                            "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                            "attack_vector": playbook.get("attack_vector"),
+                            "how_to_fix": playbook.get("how_to_fix"),
+                            "remediation": playbook.get("default_directive"),
+                            "owasp_tag": playbook.get("owasp_tag"),
+                            "cwe_id": playbook.get("cwe_id"),
+                            "cvss_score": playbook.get("cvss_score")
                         })
                         if len([f for f in external_findings if f["category"] == "MOBILE_APP"]) >= 2:
                             break
@@ -504,6 +920,14 @@ class Phase1DomainScanner:
                 message=f"Phase 2 Complete: Mapped external ecosystem, YouTube exploit radar, and mobile attack surface.",
                 status="success"
             ))
+
+        # --- SERPAPI MULTI-ENGINE AGGREGATION (100% Pure SerpApi) ---
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="SERPAPI_AGGREGATION",
+            message=f"SerpApi multi-engine reconnaissance complete: {len(subdomains)} active hosts, {len(findings)} perimeter endpoints, {len(external_findings)} external assets identified.",
+            status="success"
+        ))
 
         # --- AI TRIAGE LAYER: Gemini AI Vetting & False-Positive Elimination ---
         thoughts.append(AgentThought(

@@ -5,10 +5,10 @@
 echo "🛡️ Starting ReconFlow AI Development Environment..."
 
 # Detect port for Backend
-PORT=8000
-if lsof -i :8000 >/dev/null 2>&1; then
-    echo "⚠️ Port 8000 is occupied. Switching Backend to port 8001..."
-    PORT=8001
+PORT=8001
+if lsof -i :8001 >/dev/null 2>&1; then
+    echo "⚠️ Port 8001 is occupied. Switching Backend to port 8000..."
+    PORT=8000
 fi
 
 # 1. Start Backend
