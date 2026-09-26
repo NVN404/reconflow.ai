@@ -71,6 +71,7 @@ export interface ScanSummary {
   info_assets_count?: number;
   vulnerability_count?: number;
   ai_discarded_noise_count?: number;
+  external_threat_count?: number;
   security_score: number;
   security_grade: string;
   serpapi_credits_used: number;
@@ -96,4 +97,7 @@ export interface ScanRequest {
   domain: string;
   enable_phase2?: boolean;
   use_cache?: boolean;
+  custom_dorks?: string[];
+  enabled_vectors?: Record<string, boolean>;
 }
+

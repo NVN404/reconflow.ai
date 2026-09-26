@@ -459,8 +459,26 @@ REMEDIATION_PLAYBOOKS: Dict[str, Dict[str, Any]] = {
             "2. Enforce GitHub secret scanning and push protection."
         ],
         "default_directive": "Audit public repository for hardcoded secrets and enforce pre-commit secret scanners."
+    },
+    "CUSTOM_DORK": {
+        "title": "Custom Threat-Hunting Dork Signature Exposure",
+        "severity": "HIGH",
+        "cvss_score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N (5.3 Medium)",
+        "owasp_tag": "OWASP A05:2021 — Security Misconfiguration",
+        "cwe_id": "CWE-200: Exposure of Sensitive Information",
+        "what_is_the_bug": "An external asset or endpoint was discovered matching a user-configured threat-hunting dork signature.",
+        "why_it_is_a_bug": "Adversaries continually construct bespoke Google/Bing dork queries targeting specific technology stacks, unlisted administrative consoles, or debug parameters.",
+        "attack_vector": "Attacker leverages specialized query syntax to pinpoint non-standard infrastructure exposures that bypass standard perimeter catalogs.",
+        "how_to_fix": "Verify whether the identified URL is intended for public consumption and enforce appropriate access control or authentication headers.",
+        "actions": [
+            "1. Inspect the discovered endpoint for unauthenticated administrative or debugging interfaces.",
+            "2. Enforce IP allowlists or VPN requirements if the endpoint is an internal management utility.",
+            "3. Submit a de-indexing request via Google Search Console if the URL contains sensitive metadata."
+        ],
+        "default_directive": "Review custom dork match against access policy and enforce authentication or web server access rules."
     }
 }
+
 
 def get_remediation_for_category(category: str) -> Dict[str, Any]:
     cat = category.upper()

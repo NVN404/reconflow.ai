@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldAlert, ShieldCheck, AlertTriangle, Cpu, Zap } from "lucide-react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, Cpu, Zap, Radar } from "lucide-react";
 import { ScanSummary } from "@/lib/types";
 
 interface SummaryCardsProps {
@@ -31,7 +31,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   return (
     <div className="space-y-3 font-sans">
       {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Security Health Grade */}
         <div className="p-4 rounded-xl bg-[#141a24] border-0 flex items-center justify-between shadow-sm">
           <div>
@@ -156,6 +156,28 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           </div>
           <p className="text-[26px] font-medium text-slate-100 mt-2">
             {summary.low_risks}
+          </p>
+        </button>
+
+        {/* Threat Radar (Phase 2 External Intel) */}
+        <button
+          onClick={() => onFilterChange(activeFilter === "THREAT_RADAR" ? "ALL" : "THREAT_RADAR")}
+          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+            activeFilter === "THREAT_RADAR"
+              ? "bg-[#251545] ring-2 ring-purple-400/50"
+              : (summary.external_threat_count || 0) > 0
+              ? "bg-[#1e1435]/60 hover:bg-[#251545] ring-1 ring-purple-500/30"
+              : "bg-[#141a24] hover:bg-[#1a2230]"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-purple-300">
+              Threat Radar
+            </p>
+            <Radar className="w-4 h-4 text-purple-400" />
+          </div>
+          <p className="text-[26px] font-medium text-purple-200 mt-2">
+            {summary.external_threat_count || 0}
           </p>
         </button>
 

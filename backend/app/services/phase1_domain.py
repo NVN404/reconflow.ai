@@ -162,7 +162,14 @@ class Phase1DomainScanner:
         except Exception as e:
             return [], str(e)
 
-    def scan(self, target: str, use_cache: bool = True, enable_phase2: bool = False) -> ScanResult:
+    def scan(
+        self,
+        target: str,
+        use_cache: bool = True,
+        enable_phase2: bool = False,
+        custom_dorks: Optional[List[str]] = None,
+        enabled_vectors: Optional[Dict[str, bool]] = None
+    ) -> ScanResult:
         clean_target = target.strip().lower()
         clean_target = re.sub(r"^https?://", "", clean_target).rstrip("/")
         brand_name = clean_target.split(".")[0]
@@ -588,7 +595,12 @@ class Phase1DomainScanner:
                 api_key=self.api_key,
                 execute_serpapi_fn=self.execute_serpapi_query
             )
-            p2_findings, p2_thoughts, p2_credits = p2_scanner.run_phase2_sweep(clean_target, brand_name)
+            p2_findings, p2_thoughts, p2_credits = p2_scanner.run_phase2_sweep(
+                clean_target=clean_target,
+                brand_name=brand_name,
+                custom_dorks=custom_dorks,
+                enabled_vectors=enabled_vectors
+            )
             external_findings.extend(p2_findings)
             thoughts.extend(p2_thoughts)
             credits_used += p2_credits
@@ -658,6 +670,7 @@ class Phase1DomainScanner:
             info=info_count,
             info_assets_count=info_assets_count,
             vulnerability_count=vulnerability_count,
+            external_threat_count=len(external_findings),
             ai_discarded_noise_count=total_discarded,
             security_score=score,
             security_grade=grade,
@@ -782,6 +795,7 @@ class Phase1DomainScanner:
             info=3,
             info_assets_count=len(nodes) - 2,
             vulnerability_count=2,
+            external_threat_count=len(external_findings),
             ai_discarded_noise_count=0,
             security_score=score,
             security_grade=grade,

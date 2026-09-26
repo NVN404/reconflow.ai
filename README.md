@@ -101,34 +101,42 @@ graph TD
 | **1.2** | `google` | `site:{target} (inurl:admin OR inurl:portal OR inurl:docs OR inurl:api)` | Unauthenticated documentation / portals (OWASP A01) | `Medium` |
 | **1.3** | `google` | `site:{target} (filetype:env OR filetype:sql OR filetype:yaml OR filetype:bak)` | Sensitive configuration & database dumps (OWASP A05 / CWE-200) | `Critical` |
 | **2.1** | `google` | `site:github.com "{target}" (filename:.env OR "BEGIN RSA PRIVATE KEY")` | Public code repository credential exposure (OWASP A07) | `Critical` |
-| **2.2** | `google` | `(site:s3.amazonaws.com/{brand} OR site:*.s3.amazonaws.com "{target}")` | Misconfigured cloud storage buckets (OWASP A01 / CWE-552) | `High` |
+| **2.2** | `google` | `(site:s3.amazonaws.com/{brand} OR site:storage.googleapis.com/{brand} OR site:*.blob.core.windows.net "{brand}" OR site:*.digitaloceanspaces.com "{brand}")` | Multi-Cloud Storage Hunter: AWS S3, Azure Blob, GCS, DO Spaces with light-touch RFC open directory verification | `Critical` / `High` |
 | **2.3** | `google_news`| `"{brand}" (security OR vulnerability OR breach OR exploit)` | Real-time threat intelligence & incident alerts | `Info` |
 | **2.4** | `youtube`| `"{brand} vulnerability" OR "{brand} exploit poc"` | Security researcher exploit video radar | `Info` |
 | **2.5** | `google_play`| `q="{brand}"` | Mobile application perimeter assets | `Info` |
 | **2.6** | `duckduckgo`| `site:{target}` | Independent index cross-validation | `Info` |
+| **2.7** | `google` | User-defined custom query (e.g. `site:{target} inurl:grafana`) | **Ungated Dork Hunting**: Custom signatures with `{target}` and `{brand}` variable interpolation | `High` / `Med` |
 
 ---
 
 ## ✨ Key Features & Technical Highlights
 
-### 1. Dual-Zone Attack Surface Separation
+### 1. Dual-Zone + Phase 2 Threat Radar Architecture
 - **Zone 1: Assets & Intel** — Maps apex domains, verified subdomains, mobile applications, and YouTube researcher PoCs.
 - **Zone 2: Vulnerability Perimeter** — Isolates high-risk and critical exposures (unauthenticated API docs, exposed `.env` files, missing email authentication, Clickjacking risks).
+- **Phase 2 Threat Radar Badge & Filter** — Real-time telemetry badge on canvas and dedicated filter pill isolating external third-party risks.
 
-### 2. Dynamic Graph Layout Toggle (Vertical vs. Horizontal)
+### 2. Multi-Cloud Bucket Hunter with Light-Touch RFC Verification
+Searches across **AWS S3, Azure Blob Storage, Google Cloud Storage, and DigitalOcean Spaces**. When a bucket is discovered via SerpApi, ReconFlow performs a non-intrusive RFC check inspecting response headers for `<ListBucketResult>` (public open directory listing) vs `403 AccessDenied` (restricted asset).
+
+### 3. Ungated Dork Strategy Inspector & Custom Signature Bar
+Under the search console, an expandable panel allows security operators to inspect the exact dork syntax being executed across all 6 engines, toggle individual threat vectors on/off, and inject up to 2 custom threat-hunting dorks with dynamic `{target}` and `{brand}` variables. Zero gatekeeping.
+
+### 4. Dynamic Graph Layout Toggle (Vertical vs. Horizontal)
 Switch between **Vertical** (top-to-bottom) and **Horizontal** (left-to-right) orientations instantly. Dagre auto-layout recalculates spatial coordinates while dynamic connection handles adapt smoothly.
 
-### 3. Automatic Canvas Framing (`fitView`)
+### 5. Automatic Canvas Framing (`fitView`)
 Automated framing centers and scales the full attack graph whenever a scan completes, filters change, or the layout orientation toggles.
 
-### 4. OWASP & CWE Mapped Remediation Playbooks
+### 6. OWASP & CWE Mapped Remediation Playbooks
 Selecting any node opens a slide-out drawer with copy-paste defensive configurations:
 - **NGINX / Apache:** Specific `location` blocks denying `.env`, `.git`, and config files.
-- **Cloud Security:** AWS CLI bucket policy templates enforcing private ACLs.
+- **Cloud Security:** AWS CLI bucket policy templates enforcing private ACLs and Azure storage container RBAC.
 - **Git Remediation:** `git-filter-repo` scripts for removing purged credentials from git history.
 - **RFC Mail Defense:** Production-ready `SPF` (`v=spf1 ~all`) and `DMARC` (`p=reject`) DNS TXT records.
 
-### 5. 1-Click CISO Executive Markdown Dossier Export
+### 7. 1-Click CISO Executive Markdown Dossier Export
 Generates a comprehensive Markdown report containing the CISO executive briefing, numeric security posture score (0–100), letter grade (A–F), threat intelligence radar, and complete remediation playbooks.
 
 ---

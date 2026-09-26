@@ -125,11 +125,20 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
     ).length;
   }, [nodes]);
 
+  const externalCount = useMemo(() => {
+    return nodes.filter(
+      (n) =>
+        (n.data as any)?.origin === "EXTERNAL" ||
+        n.type === "externalExposureNode" ||
+        ["CUSTOM_DORK", "S3_LEAK", "GITHUB_LEAK", "GITHUB_REPO", "YOUTUBE_POC", "MOBILE_APP", "NEWS_BREACH", "BRAND_PRESENCE"].includes((n.data as any)?.category)
+    ).length;
+  }, [nodes]);
+
   return (
     <div className="w-full h-[640px] rounded-2xl border border-slate-800/90 bg-[#0d1117] backdrop-blur-md shadow-2xl relative overflow-hidden flex flex-col">
       {/* Canvas Top Bar: Dual-Zone Architecture Indicator + Controls */}
       <div className="absolute top-3.5 left-3.5 right-3.5 z-10 flex flex-wrap items-center justify-between pointer-events-none gap-2">
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
           {/* Zone 1: Info / Assets Section */}
           <div className="flex items-center gap-2 bg-[#0f172a]/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-sky-500/30 text-xs font-mono text-sky-300 shadow-md">
             <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
@@ -165,6 +174,17 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
               </>
             )}
           </div>
+
+          {/* Phase 2: Threat Radar Badge */}
+          {externalCount > 0 && (
+            <div className="flex items-center gap-2 bg-[#1e1435]/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-purple-500/40 text-xs font-mono text-purple-300 shadow-md">
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="font-semibold">PHASE 2: THREAT RADAR</span>
+              <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-[10px] font-bold text-purple-300">
+                {externalCount}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Top Right Layout Toggle Button */}

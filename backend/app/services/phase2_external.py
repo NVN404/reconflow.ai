@@ -2,18 +2,21 @@
 ReconFlow AI: Phase 2 External Threat Radar & Shadow IT Intelligence Scanner
 =============================================================================
 Autonomous sweep across external, third-party platforms via SerpApi:
-  1. AWS S3 & Google Cloud Storage Buckets (Pass 2.2)
+  1. Multi-Cloud Bucket Hunter: AWS S3, Azure Blob Storage, Google Cloud Storage, DigitalOcean Spaces
   2. Public GitHub Credential Leaks & Repositories (Pass 2.1, 2.1B, 2.1C)
   3. Real-Time Security Incident & Threat News via google_news (Pass 2.3)
   4. YouTube Exploit Proof-of-Concept & Bug Bounty Radar via youtube (Pass 2.4)
   5. Google Play Store Mobile Application Perimeter via google_play (Pass 2.5)
+  6. Custom User-Defined Dork Hunting (Zero Gatekeeping)
 
-Zero exploitation payloads, zero brute-force fuzzing. Purely queries public search engine indexes.
+Zero exploitation payloads, zero brute-force fuzzing. Purely queries public search engine indexes
+combined with non-intrusive public HTTP status verification.
 """
 
 import datetime
-from typing import List, Dict, Any, Tuple, Callable
+from typing import List, Dict, Any, Tuple, Callable, Optional
 from urllib.parse import urlparse
+import requests
 
 from app.schemas import AgentThought
 from app.remediation import get_remediation_for_category
@@ -29,16 +32,26 @@ class Phase2ExternalScanner:
     def run_phase2_sweep(
         self,
         clean_target: str,
-        brand_name: str
+        brand_name: str,
+        custom_dorks: Optional[List[str]] = None,
+        enabled_vectors: Optional[Dict[str, bool]] = None
     ) -> Tuple[List[Dict[str, Any]], List[AgentThought], int]:
         """
-        Executes the full Phase 2 external multi-engine sweep.
+        Executes the full Phase 2 external multi-engine sweep with vector controls & custom dorks.
         Returns:
           (external_findings, thoughts, credits_used)
         """
         external_findings: List[Dict[str, Any]] = []
         thoughts: List[AgentThought] = []
         credits_used = 0
+
+        vectors = enabled_vectors or {}
+        run_github = vectors.get("github", True)
+        run_cloud = vectors.get("cloud", True)
+        run_footprint = vectors.get("footprint", True)
+        run_news = vectors.get("news", True)
+        run_youtube = vectors.get("youtube", True)
+        run_play = vectors.get("play", True)
 
         now = datetime.datetime.now().strftime("%H:%M:%S")
         thoughts.append(AgentThought(
@@ -49,45 +62,58 @@ class Phase2ExternalScanner:
         ))
 
         # --- 1. GITHUB SECRET & CREDENTIAL LEAK AUDIT ---
-        gh_findings, gh_thoughts, gh_credits = self._audit_github_leaks(clean_target, brand_name)
-        external_findings.extend(gh_findings)
-        thoughts.extend(gh_thoughts)
-        credits_used += gh_credits
+        if run_github:
+            gh_findings, gh_thoughts, gh_credits = self._audit_github_leaks(clean_target, brand_name)
+            external_findings.extend(gh_findings)
+            thoughts.extend(gh_thoughts)
+            credits_used += gh_credits
 
-        # --- 2. PUBLIC CLOUD STORAGE BUCKETS (AWS S3 & GCS) ---
-        s3_findings, s3_thoughts, s3_credits = self._audit_cloud_storage(clean_target, brand_name)
-        external_findings.extend(s3_findings)
-        thoughts.extend(s3_thoughts)
-        credits_used += s3_credits
+        # --- 2. MULTI-CLOUD STORAGE BUCKET HUNTER (AWS S3 + Azure + GCS + DO Spaces) ---
+        if run_cloud:
+            cloud_findings, cloud_thoughts, cloud_credits = self._audit_cloud_storage(clean_target, brand_name)
+            external_findings.extend(cloud_findings)
+            thoughts.extend(cloud_thoughts)
+            credits_used += cloud_credits
 
         # --- 3. THIRD-PARTY DIRECTORY & WEB FOOTPRINT ---
-        fp_findings, fp_thoughts, fp_credits = self._audit_web_footprint(clean_target, brand_name)
-        external_findings.extend(fp_findings)
-        thoughts.extend(fp_thoughts)
-        credits_used += fp_credits
+        if run_footprint:
+            fp_findings, fp_thoughts, fp_credits = self._audit_web_footprint(clean_target, brand_name)
+            external_findings.extend(fp_findings)
+            thoughts.extend(fp_thoughts)
+            credits_used += fp_credits
 
         # --- 4. THREAT INTELLIGENCE & INCIDENT NEWS (google_news) ---
-        news_findings, news_thoughts, news_credits = self._audit_threat_news(clean_target, brand_name)
-        external_findings.extend(news_findings)
-        thoughts.extend(news_thoughts)
-        credits_used += news_credits
+        if run_news:
+            news_findings, news_thoughts, news_credits = self._audit_threat_news(clean_target, brand_name)
+            external_findings.extend(news_findings)
+            thoughts.extend(news_thoughts)
+            credits_used += news_credits
 
         # --- 5. YOUTUBE EXPLOIT POC & BUG BOUNTY RADAR (youtube) ---
-        yt_findings, yt_thoughts, yt_credits = self._audit_youtube_radar(clean_target, brand_name)
-        external_findings.extend(yt_findings)
-        thoughts.extend(yt_thoughts)
-        credits_used += yt_credits
+        if run_youtube:
+            yt_findings, yt_thoughts, yt_credits = self._audit_youtube_radar(clean_target, brand_name)
+            external_findings.extend(yt_findings)
+            thoughts.extend(yt_thoughts)
+            credits_used += yt_credits
 
         # --- 6. GOOGLE PLAY STORE MOBILE PERIMETER (google_play) ---
-        play_findings, play_thoughts, play_credits = self._audit_google_play(clean_target, brand_name)
-        external_findings.extend(play_findings)
-        thoughts.extend(play_thoughts)
-        credits_used += play_credits
+        if run_play:
+            play_findings, play_thoughts, play_credits = self._audit_google_play(clean_target, brand_name)
+            external_findings.extend(play_findings)
+            thoughts.extend(play_thoughts)
+            credits_used += play_credits
+
+        # --- 7. USER CUSTOM DORK SIGNATURES (Ungated Hunting) ---
+        if custom_dorks and len(custom_dorks) > 0:
+            custom_findings, custom_thoughts, custom_credits = self._audit_custom_dorks(clean_target, brand_name, custom_dorks)
+            external_findings.extend(custom_findings)
+            thoughts.extend(custom_thoughts)
+            credits_used += custom_credits
 
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="PHASE_2_COMPLETE",
-            message=f"Phase 2 Complete: Mapped external cloud buckets, GitHub leaks, YouTube exploit radar, and mobile perimeter.",
+            message=f"Phase 2 Complete: Mapped external multi-cloud storage, GitHub leaks, YouTube exploit radar, and mobile perimeter.",
             status="success"
         ))
 
@@ -135,6 +161,7 @@ class Phase2ExternalScanner:
                     "dork": gh_query,
                     "surface": "GitHub Repository",
                     "engine": "google",
+                    "section": "VULNERABILITY" if is_secret else "INFO",
                     "what_is_the_bug": f"Public GitHub repository referencing brand assets or credentials at {link}.",
                     "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
                     "attack_vector": playbook.get("attack_vector"),
@@ -222,48 +249,107 @@ class Phase2ExternalScanner:
     def _audit_cloud_storage(
         self, clean_target: str, brand_name: str
     ) -> Tuple[List[Dict[str, Any]], List[AgentThought], int]:
+        """
+        Multi-Cloud Storage Hunter:
+        Scours AWS S3, Google Cloud Storage, Azure Blob Storage, and DigitalOcean Spaces.
+        Validates discovered storage endpoints with non-intrusive RFC inspection.
+        """
         findings: List[Dict[str, Any]] = []
         thoughts: List[AgentThought] = []
         credits = 0
 
-        s3_query = f"(site:s3.amazonaws.com/{brand_name} OR site:storage.googleapis.com/{brand_name} OR site:*.s3.amazonaws.com \"{clean_target}\")"
+        # Multi-Cloud Search Dork across all 4 major cloud providers
+        cloud_query = f"(site:s3.amazonaws.com/{brand_name} OR site:storage.googleapis.com/{brand_name} OR site:*.blob.core.windows.net \"{brand_name}\" OR site:*.digitaloceanspaces.com \"{brand_name}\" OR site:*.s3.amazonaws.com \"{clean_target}\")"
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="PASS_2_2",
-            message=f"Auditing brand-owned cloud storage buckets: '{s3_query}'",
+            stage="PASS_2_2_MULTICLOUD",
+            message=f"Hunting multi-cloud storage buckets (AWS S3, Azure Blob, GCS, DO Spaces): '{cloud_query}'",
             status="info"
         ))
-        s3_results, s3_err = self.execute_serpapi_query(s3_query, engine="google")
-        if not s3_err and s3_results:
+        cloud_results, cloud_err = self.execute_serpapi_query(cloud_query, engine="google")
+        if not cloud_err and cloud_results:
             credits += 1
-            for res in s3_results:
+            for res in cloud_results:
                 link = res.get("link", "")
                 parsed = urlparse(link)
                 host = parsed.netloc.lower()
                 path = parsed.path.lower()
+
+                # Determine Cloud Provider
+                if "blob.core.windows.net" in host:
+                    provider = "Azure Blob Storage"
+                elif "storage.googleapis.com" in host or "googleapis.com" in host:
+                    provider = "Google Cloud Storage"
+                elif "digitaloceanspaces.com" in host:
+                    provider = "DigitalOcean Spaces"
+                else:
+                    provider = "AWS S3 Bucket"
+
+                # Verify ownership: brand must be in the host or top-level bucket path
                 if brand_name not in host and not path.startswith(f"/{brand_name}") and clean_target not in link.lower():
                     continue
-                is_leak = any(ext in link.lower() for ext in [".sql", ".env", ".bak", ".csv", ".json", ".zip", ".tar"])
+
+                # Non-intrusive light-touch verification (check if bucket has open listing)
+                is_open_dir = False
+                is_access_denied = False
+                try:
+                    r = requests.get(
+                        link,
+                        timeout=2.0,
+                        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ReconFlow-EASM/1.0", "Range": "bytes=0-1024"}
+                    )
+                    body_sample = r.text[:1024].lower()
+                    if "<listbucketresult>" in body_sample or "<enumerationresults>" in body_sample or "<contents>" in body_sample:
+                        is_open_dir = True
+                    elif r.status_code == 403 or "accessdenied" in body_sample or "authenticationfailed" in body_sample:
+                        is_access_denied = True
+                except Exception:
+                    pass
+
+                is_sensitive_file = any(ext in link.lower() for ext in [".sql", ".env", ".bak", ".csv", ".json", ".zip", ".tar", ".gz"])
                 playbook = get_remediation_for_category("S3_LEAK")
+
+                if is_open_dir:
+                    title = f"Public Open Directory Listing on {provider}"
+                    severity = "CRITICAL"
+                    section = "VULNERABILITY"
+                    what_is = f"The {provider} container allows unauthenticated public directory listing (<ListBucketResult>)."
+                elif is_sensitive_file:
+                    title = f"Exposed Sensitive Object in {provider}"
+                    severity = "HIGH"
+                    section = "VULNERABILITY"
+                    what_is = f"Publicly readable sensitive backup or configuration file in {provider} at {link}."
+                elif is_access_denied:
+                    title = f"Secured {provider} Perimeter Asset (403 AccessDenied)"
+                    severity = "INFO"
+                    section = "INFO"
+                    what_is = f"Discovered {provider} container verified restricted via access control policies."
+                else:
+                    title = f"Public {provider} Asset"
+                    severity = "LOW"
+                    section = "INFO"
+                    what_is = f"Publicly accessible static cloud asset in {provider} at {link}."
+
                 findings.append({
-                    "title": "Public Cloud Storage Bucket Exposure" if is_leak else "Public Cloud Storage Asset",
+                    "title": title,
                     "category": "S3_LEAK",
-                    "severity": "HIGH" if is_leak else "LOW",
+                    "severity": severity,
                     "url": link,
-                    "snippet": res.get("snippet", "Cloud storage object."),
-                    "dork": s3_query,
-                    "surface": "AWS S3 / Cloud Storage",
+                    "snippet": res.get("snippet", f"Cloud storage object on {provider}."),
+                    "dork": cloud_query,
+                    "surface": f"Cloud Storage ({provider})",
                     "engine": "google",
-                    "what_is_the_bug": f"Public cloud object store accessible at {link}.",
+                    "section": section,
+                    "what_is_the_bug": what_is,
                     "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
                     "attack_vector": playbook.get("attack_vector"),
                     "how_to_fix": playbook.get("how_to_fix"),
                     "remediation": playbook.get("default_directive"),
-                    "owasp_tag": playbook.get("owasp_tag"),
-                    "cwe_id": playbook.get("cwe_id"),
-                    "cvss_score": playbook.get("cvss_score") if is_leak else "CVSS 3.0 (Low)"
+                    "owasp_tag": "OWASP A01:2021 — Broken Access Control" if severity in ["CRITICAL", "HIGH"] else "OSINT Infrastructure",
+                    "cwe_id": "CWE-552: Files or Directories Accessible to External Parties",
+                    "cvss_score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N (7.5 High)" if severity in ["CRITICAL", "HIGH"] else "CVSS 3.0 (Low)"
                 })
-                if len([f for f in findings if f["category"] == "S3_LEAK"]) >= 3:
+                if len([f for f in findings if f["category"] == "S3_LEAK"]) >= 4:
                     break
 
         return findings, thoughts, credits
@@ -340,6 +426,7 @@ class Phase2ExternalScanner:
                     "dork": news_query,
                     "surface": "Threat Intelligence News",
                     "engine": "google_news",
+                    "section": "INFO",
                     "what_is_the_bug": f"External threat intelligence bulletin referencing {brand_name}.",
                     "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
                     "attack_vector": playbook.get("attack_vector"),
@@ -399,6 +486,7 @@ class Phase2ExternalScanner:
                     "dork": yt_query,
                     "surface": "YouTube Exploit Radar",
                     "engine": "youtube",
+                    "section": "INFO",
                     "what_is_the_bug": f"Researcher exploit demonstration video referencing {brand_name}.",
                     "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
                     "attack_vector": playbook.get("attack_vector"),
@@ -447,6 +535,7 @@ class Phase2ExternalScanner:
                         "dork": f"engine:google_play q={play_query}",
                         "surface": "Google Play Store",
                         "engine": "google_play",
+                        "section": "INFO",
                         "what_is_the_bug": f"Published mobile application perimeter asset ({pkg_id}).",
                         "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
                         "attack_vector": playbook.get("attack_vector"),
@@ -458,5 +547,58 @@ class Phase2ExternalScanner:
                     })
                     if len([f for f in findings if f["category"] == "MOBILE_APP"]) >= 2:
                         break
+
+        return findings, thoughts, credits
+
+    def _audit_custom_dorks(
+        self, clean_target: str, brand_name: str, custom_dorks: List[str]
+    ) -> Tuple[List[Dict[str, Any]], List[AgentThought], int]:
+        """
+        Executes user-defined custom dork queries via SerpApi (Ungated Hunting).
+        Replaces {target} and {brand} variables with clean target inputs.
+        """
+        findings: List[Dict[str, Any]] = []
+        thoughts: List[AgentThought] = []
+        credits = 0
+
+        for raw_dork in custom_dorks[:2]:  # Limit to 2 custom dorks to conserve credits
+            dork = raw_dork.replace("{target}", clean_target).replace("{brand}", brand_name).strip()
+            if not dork:
+                continue
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="CUSTOM_DORK",
+                message=f"Executing custom threat-hunting dork: '{dork}'",
+                status="info"
+            ))
+            results, err = self.execute_serpapi_query(dork, engine="google")
+            if not err and results:
+                credits += 1
+                for res in results[:3]:
+                    link = res.get("link", "")
+                    snip = res.get("snippet", "")
+                    title = res.get("title", "Custom Dork Target Finding")
+                    is_sensitive = any(k in (snip + " " + link).lower() for k in ["secret", ".env", "password", "token", "private key", "access_key"])
+                    is_suspicious = any(k in (snip + " " + link).lower() for k in ["admin", "login", "config", "dashboard", "portal", "swagger", "graphiql"])
+                    playbook = get_remediation_for_category("CUSTOM_DORK")
+                    findings.append({
+                        "title": f"Custom Match: {title[:55]}",
+                        "category": "CUSTOM_DORK",
+                        "severity": "HIGH" if is_sensitive else "MEDIUM" if is_suspicious else "LOW",
+                        "url": link,
+                        "snippet": snip or f"Discovered via custom dork: {dork}",
+                        "dork": dork,
+                        "surface": "Custom Dork Signature",
+                        "engine": "google",
+                        "section": "VULNERABILITY" if is_suspicious else "INFO",
+                        "what_is_the_bug": f"External asset matching user-configured signature '{dork}' at {link}.",
+                        "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                        "attack_vector": "Attacker leverages specialized query syntax to locate unlisted or sensitive endpoints.",
+                        "how_to_fix": "Verify that this endpoint requires multi-factor authentication and review public search indexing status.",
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": "OWASP A05:2021 — Security Misconfiguration",
+                        "cwe_id": "CWE-200: Exposure of Sensitive Information",
+                        "cvss_score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N (5.3 Medium)"
+                    })
 
         return findings, thoughts, credits

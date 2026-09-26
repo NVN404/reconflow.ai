@@ -54,6 +54,7 @@ class ScanSummary(BaseModel):
     info_assets_count: int = 0
     vulnerability_count: int = 0
     ai_discarded_noise_count: int = 0
+    external_threat_count: int = 0
     security_score: int  # 0 to 100
     security_grade: str  # A, B, C, D, F
     serpapi_credits_used: int
@@ -76,3 +77,5 @@ class ScanRequest(BaseModel):
     domain: str
     enable_phase2: bool = False
     use_cache: bool = True
+    custom_dorks: Optional[List[str]] = Field(default_factory=list)
+    enabled_vectors: Optional[Dict[str, bool]] = Field(default_factory=dict)
