@@ -10,11 +10,6 @@ from app.cache import get_cached_scan, set_cached_scan
 from app.schemas import ScanResult, ScanSummary, AgentThought
 from app.services.triage import compute_security_score, build_executive_summary, layout_graph, ai_triage_findings
 from app.remediation import get_remediation_for_category
-from app.services.osint_scanner import (
-    audit_dns_and_email_security,
-    probe_live_subdomains,
-    audit_http_surface_and_headers
-)
 from app.services.phase2_external import Phase2ExternalScanner
 
 
@@ -213,66 +208,13 @@ class Phase1DomainScanner:
                         "engine": eng
                     })
 
-        # --- STEP 1: Light-Touch RFC Telemetry: Live DNS & Mail Authentication Audit (SPF / DMARC / CAA) ---
+        # --- PHASE 1: AUTONOMOUS MULTI-ENGINE DOMAIN DORKING (100% PURE SERPAPI) ---
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="RFC_TELEMETRY_DNS",
-            message=f"Executing light-touch RFC telemetry: DNS records, SPF/DMARC mail policies, and CAA inspection for '{clean_target}'",
+            stage="PHASE_1_INIT",
+            message=f"Initiating 100% pure SerpApi domain reconnaissance for target: '{clean_target}'",
             status="info"
         ))
-        dns_intel, dns_findings = audit_dns_and_email_security(clean_target)
-        if dns_intel.get("ips"):
-            thoughts.append(AgentThought(
-                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="RFC_TELEMETRY_MAPPED",
-                message=f"Resolved Apex IPs: {', '.join(dns_intel['ips'][:3])} | NS: {', '.join(dns_intel.get('nameservers', [])[:2])} | MX: {', '.join(dns_intel.get('mail_servers', [])[:2])}",
-                status="success"
-            ))
-        for df in dns_findings:
-            findings.append(df)
-            thoughts.append(AgentThought(
-                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="PERIMETER_ANOMALY" if df.get("severity") in ["CRITICAL", "HIGH"] else "PERIMETER_NOTICE",
-                message=f"DNS {df.get('severity')} finding: {df.get('title')}",
-                status="critical" if df.get("severity") in ["CRITICAL", "HIGH"] else "warning"
-            ))
-
-        # --- STEP 2: Light-Touch Subdomain Resolution Sweep ---
-        thoughts.append(AgentThought(
-            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="SUBDOMAIN_SWEEP",
-            message=f"Resolving standard RFC hostnames across corporate subdomains for perimeter baseline...",
-            status="info"
-        ))
-        active_subs = probe_live_subdomains(clean_target)
-        for sub in active_subs:
-            register_host(sub["host"], sub["url"], sub["snippet"], sub["dork"], sub["engine"])
-        if active_subs:
-            thoughts.append(AgentThought(
-                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="SUBDOMAIN_DISCOVERY",
-                message=f"Light-touch DNS resolution mapped {len(active_subs)} live infrastructure subdomains.",
-                status="success"
-            ))
-
-        # --- STEP 3: HTTP Perimeter Telemetry & Security Headers Audit ---
-        thoughts.append(AgentThought(
-            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-            stage="HTTP_TELEMETRY",
-            message=f"Inspecting public RFC HTTP headers, CSP, Anti-Clickjacking, and robots.txt on 'https://{clean_target}'",
-            status="info"
-        ))
-        web_profile, http_vulns, http_assets = audit_http_surface_and_headers(clean_target)
-        for hv in http_vulns:
-            findings.append(hv)
-            thoughts.append(AgentThought(
-                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
-                stage="HEADER_DEFECT",
-                message=f"Security Header {hv.get('severity')} Risk: {hv.get('title')}",
-                status="critical" if hv.get("severity") in ["CRITICAL", "HIGH"] else "warning"
-            ))
-        for ha in http_assets:
-            findings.append(ha)
 
         # --- PASS 1.1: Subdomain Harvesting via Google ---
         pass1_query = f"site:*.{clean_target} -www.{clean_target}"

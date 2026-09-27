@@ -163,7 +163,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
             <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Hybrid Recon (Passive Search + Light-Touch Telemetry)</span>
+            <span>100% Pure SerpApi Autonomous Recon</span>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer select-none opacity-90 hover:opacity-100 transition">

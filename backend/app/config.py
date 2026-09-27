@@ -16,37 +16,37 @@ def load_env_vars():
 load_env_vars()
 
 def get_serpapi_key() -> str:
-    key = os.getenv("SERPAPI_KEY", "").strip()
-    if not key and (ROOT_DIR / ".env").exists():
-        try:
-            with open(ROOT_DIR / ".env") as f:
-                for line in f:
-                    if line.strip().startswith("SERPAPI_KEY="):
-                        val = line.strip().split("SERPAPI_KEY=", 1)[1].strip().strip('"').strip("'")
-                        if val:
-                            key = val
-                            os.environ["SERPAPI_KEY"] = key
-                            break
-        except Exception:
-            pass
-    return key
+    # First check .env files dynamically for freshest key
+    for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env"]:
+        if env_path.exists():
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("SERPAPI_KEY="):
+                            val = line_s.split("SERPAPI_KEY=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                os.environ["SERPAPI_KEY"] = val
+                                return val
+            except Exception:
+                pass
+    return os.getenv("SERPAPI_KEY", "").strip()
 
 def get_gemini_api_key() -> str:
-
-    key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not key and (ROOT_DIR / ".env").exists():
-        try:
-            with open(ROOT_DIR / ".env") as f:
-                for line in f:
-                    if line.strip().startswith("GEMINI_API_KEY="):
-                        val = line.strip().split("GEMINI_API_KEY=", 1)[1].strip().strip('"').strip("'")
-                        if val:
-                            key = val
-                            os.environ["GEMINI_API_KEY"] = key
-                            break
-        except Exception:
-            pass
-    return key
+    for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env"]:
+        if env_path.exists():
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("GEMINI_API_KEY="):
+                            val = line_s.split("GEMINI_API_KEY=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                os.environ["GEMINI_API_KEY"] = val
+                                return val
+            except Exception:
+                pass
+    return os.getenv("GEMINI_API_KEY", "").strip()
 
 SERPAPI_KEY = get_serpapi_key()
 GEMINI_API_KEY = get_gemini_api_key()

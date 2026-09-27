@@ -9,14 +9,12 @@ Autonomous sweep across external, third-party platforms via SerpApi:
   5. Google Play Store Mobile Application Perimeter via google_play (Pass 2.5)
   6. Custom User-Defined Dork Hunting (Zero Gatekeeping)
 
-Zero exploitation payloads, zero brute-force fuzzing. Purely queries public search engine indexes
-combined with non-intrusive public HTTP status verification.
+Zero exploitation payloads, zero socket probes, zero raw HTTP requests. Purely queries public search engine indexes via SerpApi.
 """
 
 import datetime
 from typing import List, Dict, Any, Tuple, Callable, Optional
 from urllib.parse import urlparse
-import requests
 
 from app.schemas import AgentThought
 from app.remediation import get_remediation_for_category
@@ -289,41 +287,22 @@ class Phase2ExternalScanner:
                 if brand_name not in host and not path.startswith(f"/{brand_name}") and clean_target not in link.lower():
                     continue
 
-                # Non-intrusive light-touch verification (check if bucket has open listing)
-                is_open_dir = False
-                is_access_denied = False
-                try:
-                    r = requests.get(
-                        link,
-                        timeout=2.0,
-                        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ReconFlow-EASM/1.0", "Range": "bytes=0-1024"}
-                    )
-                    body_sample = r.text[:1024].lower()
-                    if "<listbucketresult>" in body_sample or "<enumerationresults>" in body_sample or "<contents>" in body_sample:
-                        is_open_dir = True
-                    elif r.status_code == 403 or "accessdenied" in body_sample or "authenticationfailed" in body_sample:
-                        is_access_denied = True
-                except Exception:
-                    pass
-
-                is_sensitive_file = any(ext in link.lower() for ext in [".sql", ".env", ".bak", ".csv", ".json", ".zip", ".tar", ".gz"])
+                # Pure SerpApi Search Intelligence Classification (Zero raw HTTP socket connections)
+                snip_lower = (res.get("snippet", "") + " " + link).lower()
+                is_open_dir = any(k in snip_lower for k in ["<listbucketresult>", "index of /", "<enumerationresults>", "<contents>", "keys:"])
+                is_sensitive_file = any(ext in link.lower() for ext in [".sql", ".env", ".bak", ".csv", ".json", ".zip", ".tar", ".gz", ".dump"])
                 playbook = get_remediation_for_category("S3_LEAK")
 
                 if is_open_dir:
                     title = f"Public Open Directory Listing on {provider}"
                     severity = "CRITICAL"
                     section = "VULNERABILITY"
-                    what_is = f"The {provider} container allows unauthenticated public directory listing (<ListBucketResult>)."
+                    what_is = f"The {provider} container exposes an unauthenticated public directory listing indexed by search crawlers."
                 elif is_sensitive_file:
                     title = f"Exposed Sensitive Object in {provider}"
                     severity = "HIGH"
                     section = "VULNERABILITY"
                     what_is = f"Publicly readable sensitive backup or configuration file in {provider} at {link}."
-                elif is_access_denied:
-                    title = f"Secured {provider} Perimeter Asset (403 AccessDenied)"
-                    severity = "INFO"
-                    section = "INFO"
-                    what_is = f"Discovered {provider} container verified restricted via access control policies."
                 else:
                     title = f"Public {provider} Asset"
                     severity = "LOW"

@@ -51,7 +51,7 @@ export default function Home() {
     {
       timestamp: "READY",
       stage: "READY",
-      message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
+      message: "100% Pure SerpApi Autonomous Recon active (Passive Search Intelligence). Ready to audit target perimeter.",
       status: "success",
     },
   ]);
@@ -69,7 +69,7 @@ export default function Home() {
       {
         timestamp: now,
         stage: "READY",
-        message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
+        message: "100% Pure SerpApi Autonomous Recon active (Passive Search Intelligence). Ready to audit target perimeter.",
         status: "success",
       },
     ]);
@@ -348,7 +348,7 @@ export default function Home() {
           </div>
           <div>
             Target: <span className="text-[#6fb2f5] font-mono">{scanResult?.summary?.target || "Standing By"}</span> |{" "}
-            <span className="text-emerald-400">Non-Intrusive Hybrid EASM (Search Intel + RFC Telemetry)</span>
+            <span className="text-emerald-400">100% Pure SerpApi Autonomous EASM (Multi-Engine Search Intelligence)</span>
           </div>
         </div>
       </footer>
