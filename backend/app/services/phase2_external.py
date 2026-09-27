@@ -221,26 +221,55 @@ class Phase2ExternalScanner:
             credits += 1
             for res in paste_res[:2]:
                 link = res.get("link", "")
-                playbook = get_remediation_for_category("CONFIG_LEAK")
-                findings.append({
-                    "title": f"Public Paste Snippet: {res.get('title', 'Leaked Pastebin Record')[:50]}",
-                    "category": "CONFIG_LEAK",
-                    "severity": "HIGH",
-                    "url": link,
-                    "snippet": res.get("snippet", "Public pastebin or gist snippet referencing target domain."),
-                    "dork": paste_query,
-                    "surface": "Pastebin / Gist Leak",
-                    "engine": "google",
-                    "section": "VULNERABILITY",
-                    "what_is_the_bug": f"Public code paste referencing {clean_target} at {link}.",
-                    "why_it_is_a_bug": "Adversaries paste extracted database records, configurations, or tokens to pastebin services.",
-                    "attack_vector": "Attacker exfiltrates internal credentials or server dumps to public pastebin services.",
-                    "how_to_fix": "Request immediate removal of paste and rotate any referenced credentials.",
-                    "remediation": playbook.get("default_directive"),
-                    "owasp_tag": playbook.get("owasp_tag"),
-                    "cwe_id": playbook.get("cwe_id"),
-                    "cvss_score": playbook.get("cvss_score")
-                })
+                snippet_text = res.get("snippet", "")
+                text_to_check = (snippet_text + " " + link).lower()
+                is_sensitive_paste = any(k in text_to_check for k in [
+                    "password", "secret", "token", "api_key", "bearer", 
+                    "private_key", ".env", "aws_", "db_pass", "credentials", "authorization:"
+                ])
+                
+                if is_sensitive_paste:
+                    playbook = get_remediation_for_category("CONFIG_LEAK")
+                    findings.append({
+                        "title": f"Public Paste Snippet: {res.get('title', 'Leaked Pastebin Record')[:50]}",
+                        "category": "CONFIG_LEAK",
+                        "severity": "HIGH",
+                        "url": link,
+                        "snippet": snippet_text or "Public pastebin or gist snippet referencing target credentials.",
+                        "dork": paste_query,
+                        "surface": "Pastebin / Gist Leak",
+                        "engine": "google",
+                        "section": "VULNERABILITY",
+                        "what_is_the_bug": f"Public code paste exposing potential sensitive secrets or tokens at {link}.",
+                        "why_it_is_a_bug": "Adversaries paste extracted database records, configurations, or tokens to pastebin services.",
+                        "attack_vector": "Attacker exfiltrates internal credentials or server dumps to public pastebin services.",
+                        "how_to_fix": "Request immediate removal of paste and rotate any referenced credentials.",
+                        "remediation": playbook.get("default_directive"),
+                        "owasp_tag": playbook.get("owasp_tag"),
+                        "cwe_id": playbook.get("cwe_id"),
+                        "cvss_score": playbook.get("cvss_score")
+                    })
+                else:
+                    findings.append({
+                        "title": f"Public Gist / Paste: {res.get('title', 'Public Code Snippet')[:50]}",
+                        "category": "RESOURCE",
+                        "severity": "INFO",
+                        "url": link,
+                        "snippet": snippet_text or "Public pastebin or gist snippet referencing target domain.",
+                        "dork": paste_query,
+                        "surface": "Public Gist / Paste Asset",
+                        "engine": "google",
+                        "section": "INFO",
+                        "what_is_the_bug": f"Public community code snippet or drawing export referencing {clean_target}.",
+                        "why_it_is_a_bug": "Public community export or integration snippet; does not contain exposed credentials.",
+                        "attack_vector": "Informational reconnaissance only; no attack surface exposed.",
+                        "how_to_fix": "No remediation required. Benign public snippet.",
+                        "remediation": "No remediation required.",
+                        "owasp_tag": "N/A",
+                        "cwe_id": "N/A",
+                        "cvss_score": "N/A",
+                        "remediation_steps": []
+                    })
 
         return findings, thoughts, credits
 

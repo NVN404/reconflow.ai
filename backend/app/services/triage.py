@@ -63,9 +63,8 @@ def ai_triage_findings(
         )
 
         models_to_try = [
-            "gemini-flash-lite-latest",
-            "gemini-3-flash-preview",
-            "gemini-3.1-flash-lite"
+            "gemini-3.8-flash",
+            "gemini-flash-latest"
         ]
 
         for model_name in models_to_try:
@@ -95,11 +94,13 @@ def ai_triage_findings(
                             cat = f.get("category", "")
                             raw_class = item_eval.get("classification") if item_eval else None
                             
-                            # Preserve explicit vulnerability flags
-                            if f.get("section") == "VULNERABILITY" or raw_class == "VULNERABILITY":
-                                classification = "VULNERABILITY"
-                            elif raw_class in ["INFO", "RESOURCE"]:
+                            # Prioritize AI classification
+                            if item_eval and raw_class in ["INFO", "RESOURCE"]:
                                 classification = raw_class
+                            elif item_eval and raw_class == "VULNERABILITY":
+                                classification = "VULNERABILITY"
+                            elif f.get("section") == "VULNERABILITY":
+                                classification = "VULNERABILITY"
                             elif f.get("severity") in ["CRITICAL", "HIGH"] and cat in ["CONFIG_LEAK", "TOKEN_LEAK"]:
                                 classification = "VULNERABILITY"
                             elif cat in ["YOUTUBE_POC", "NEWS_BREACH", "RESOURCE", "BRAND_PRESENCE"] or "resource" in cat.lower():
@@ -110,9 +111,12 @@ def ai_triage_findings(
                             approved_item["section"] = classification
                             approved_item["triage_classification"] = classification
                             approved_item["triage_reason"] = item_eval.get("reason", "Verified legitimate intelligence.") if item_eval else "Rule-verified."
-                            if classification == "RESOURCE":
+                            
+                            # If classified as INFO or RESOURCE, ensure it is non-vulnerable
+                            if classification in ["RESOURCE", "INFO"]:
                                 approved_item["severity"] = "INFO"
-                                approved_item["category"] = "RESOURCE"
+                                if classification == "RESOURCE":
+                                    approved_item["category"] = "RESOURCE"
                             
                             # Attach rich AI explanations if provided
                             if item_eval:
@@ -123,7 +127,17 @@ def ai_triage_findings(
                                 if item_eval.get("how_to_fix"):
                                     approved_item["how_to_fix"] = item_eval["how_to_fix"]
                                     
-                            approved.append(approved_item)
+                            # Clear irrelevant CVSS/remediation if declared safe or no remediation required
+                            if classification in ["RESOURCE", "INFO"]:
+                                why_lower = approved_item.get("why_it_is_a_bug", "").lower()
+                                how_lower = approved_item.get("how_to_fix", "").lower()
+                                reason_lower = approved_item.get("triage_reason", "").lower()
+                                if "not a security vulnerability" in why_lower or "no remediation" in how_lower or "safe" in reason_lower:
+                                    approved_item["cvss_score"] = "N/A"
+                                    approved_item["owasp_tag"] = "N/A"
+                                    approved_item["cwe_id"] = "N/A"
+                                    approved_item["remediation_steps"] = []
+                                    approved_item["remediation"] = "No remediation required."
 
                     return approved, discarded
             except Exception:
@@ -195,7 +209,7 @@ def build_executive_summary(target: str, total: int, critical: int, high: int, m
             f"Medium Risks: {medium}, Security Score: {score}/100, Grade: {grade}. "
             f"Tone: Professional, authoritative, actionable."
         )
-        models_to_try = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite"]
+        models_to_try = ["gemini-3.8-flash", "gemini-flash-latest"]
         for m in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_key}"
             try:
@@ -366,7 +380,7 @@ def layout_graph(
                 why_it_is_a_bug=find.get("why_it_is_a_bug") or playbook.get("why_it_is_a_bug"),
                 attack_vector=find.get("attack_vector") or playbook.get("attack_vector"),
                 how_to_fix=find.get("how_to_fix") or playbook.get("how_to_fix"),
-                remediation_steps=find.get("remediation_steps") or playbook.get("actions"),
+                remediation_steps=find.get("remediation_steps") if find.get("remediation_steps") is not None else ([] if find.get("section") == "INFO" and "no remediation" in (find.get("how_to_fix") or "").lower() else playbook.get("actions")),
                 remediation=find.get("remediation") or playbook.get("default_directive"),
                 metadata=FindingMetadata(
                     url=find.get("url", ""),
@@ -435,7 +449,7 @@ def layout_graph(
                 why_it_is_a_bug=ext.get("why_it_is_a_bug") or playbook.get("why_it_is_a_bug"),
                 attack_vector=ext.get("attack_vector") or playbook.get("attack_vector"),
                 how_to_fix=ext.get("how_to_fix") or playbook.get("how_to_fix"),
-                remediation_steps=ext.get("remediation_steps") or playbook.get("actions"),
+                remediation_steps=ext.get("remediation_steps") if ext.get("remediation_steps") is not None else ([] if ext.get("section") == "INFO" and "no remediation" in (ext.get("how_to_fix") or "").lower() else playbook.get("actions")),
                 remediation=ext.get("remediation") or playbook.get("default_directive"),
                 metadata=FindingMetadata(
                     url=ext.get("url", ""),
