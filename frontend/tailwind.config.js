@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,33 +10,63 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        cyber: {
-          dark: "#0a0d14",
-          surface: "#111726",
-          border: "#1e293b",
-          primary: "#0284c7",
-          neon: "#38bdf8",
-          critical: "#ef4444",
-          high: "#f97316",
-          medium: "#f59e0b",
-          low: "#3b82f6",
-          info: "#64748b",
-          success: "#10b981",
+        // Brand accent — restrained lime signal
+        lime: {
+          DEFAULT: "#B7E36A",
+          hover: "#D9F5A5",
+          50: "#f6fde8",
+          100: "#eafad1",
+          200: "#d5f4a4",
+          300: "#B7E36A",
+          400: "#D9F5A5",
+          500: "#a3d452",
+          600: "#82b83a",
+          700: "#62912c",
+          800: "#4e7224",
+          900: "#3c571e",
+          950: "#1e2f0d",
         },
-      },
-      animation: {
-        "pulse-fast": "pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "glow-red": "glowRed 2s ease-in-out infinite alternate",
-        "glow-blue": "glowBlue 2.5s ease-in-out infinite alternate",
-      },
-      keyframes: {
-        glowRed: {
-          "0%": { boxShadow: "0 0 5px rgba(239, 68, 68, 0.4), inset 0 0 5px rgba(239, 68, 68, 0.2)" },
-          "100%": { boxShadow: "0 0 20px rgba(239, 68, 68, 0.8), inset 0 0 10px rgba(239, 68, 68, 0.4)" },
+        // True neutral blacks — cooler than zinc
+        obsidian: {
+          50: "#F7F7F5",
+          100: "#E8E8E6",
+          200: "#D0D0CE",
+          300: "#A0A09C",
+          400: "#6F6F6B",
+          500: "#4A4A47",
+          600: "#383838",
+          700: "#292929",
+          800: "#1C1C1C",
+          850: "#141414",
+          900: "#111111",
+          925: "#0B0B0B",
+          950: "#080808",
+          975: "#050505",
         },
-        glowBlue: {
-          "0%": { boxShadow: "0 0 5px rgba(56, 189, 248, 0.4)" },
-          "100%": { boxShadow: "0 0 18px rgba(56, 189, 248, 0.8)" },
+
+        // ─── Semantic surface aliases (dark-mode static) ───────────────
+        // These map component class names to the design system hex values.
+
+        // Backgrounds
+        background: "#050505",
+        surface: {
+          DEFAULT: "#080808",
+          elevated: "#0B0B0B",
+          hover: "#111111",
+          card: "#0B0B0B",
+        },
+
+        // Text
+        foreground: {
+          DEFAULT: "#F7F7F5",
+          secondary: "#A0A09C",
+          muted: "#6F6F6B",
+        },
+
+        // Borders
+        border: {
+          DEFAULT: "#292929",
+          strong: "#383838",
         },
       },
     },

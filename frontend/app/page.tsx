@@ -1,17 +1,23 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  ShieldAlert,
-  Download,
-  Sparkles,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-import { GraphCanvas } from "@/components/GraphCanvas";
+import { Navbar } from "@/components/Navbar";
+import { HeroSection } from "@/components/HeroSection";
+import { ProblemSection } from "@/components/ProblemSection";
 import { SearchBar } from "@/components/SearchBar";
 import { SummaryCards } from "@/components/SummaryCards";
+import { GraphCanvas } from "@/components/GraphCanvas";
 import { FindingDrawer } from "@/components/FindingDrawer";
 import { ThoughtStream } from "@/components/ThoughtStream";
+import { HowItWorksSection } from "@/components/HowItWorksSection";
+import { RemediationSection } from "@/components/RemediationSection";
+import { CapabilitiesSection } from "@/components/CapabilitiesSection";
+import { PricingSection } from "@/components/PricingSection";
+import { FinalCTASection } from "@/components/FinalCTASection";
+import { Footer } from "@/components/Footer";
+
 import { getLayoutedElements } from "@/lib/layout";
 import { ScanResult, GraphNode, AgentThought } from "@/lib/types";
 
@@ -27,9 +33,10 @@ const initialScanResult: ScanResult = {
     security_score: 100,
     security_grade: "A",
     serpapi_credits_used: 0,
-    generated_at: "2026-09-24T00:00:00Z",
+    generated_at: "2026-09-26T00:00:00Z",
   },
-  executive_summary: "ReconFlow AI Armed. Enter any target domain (e.g. reconflow.ai) and click 'Execute Live Recon' to initiate real-time multi-engine reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
+  executive_summary:
+    "ReconFlow AI Standing By. Enter any target domain (e.g. reconflow.ai) to initiate multi-engine external reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
   nodes: [],
   edges: [],
   thoughts: [],
@@ -56,7 +63,6 @@ export default function Home() {
     },
   ]);
 
-  // Sync client-side timestamp on mount to prevent SSR hydration mismatch
   useEffect(() => {
     const now = new Date().toLocaleTimeString("en-GB");
     setThoughts([
@@ -75,16 +81,13 @@ export default function Home() {
     ]);
   }, []);
 
-  // Handle Graph Layout Direction Toggle
   const handleToggleLayout = () => {
     setLayoutDirection((prev) => (prev === "TB" ? "LR" : "TB"));
   };
 
-  // Layout nodes with Dagre auto-layout
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
     if (!scanResult || !scanResult.nodes) return { nodes: [], edges: [] };
 
-    // Apply severity or section filter if not 'ALL'
     let filteredNodes = scanResult.nodes;
     if (activeFilter !== "ALL") {
       filteredNodes = scanResult.nodes.filter(
@@ -107,12 +110,15 @@ export default function Home() {
     );
   }, [scanResult, activeFilter, layoutDirection]);
 
-  // Handle Live Scan Request
   const handleScan = async (domain: string, enablePhase2: boolean = true) => {
     setIsScanning(true);
     setSelectedNode(null);
 
-    // Initial streaming log
+    const el = document.getElementById("graph-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     const startTime = new Date().toLocaleTimeString("en-GB");
     setThoughts([
       {
@@ -160,7 +166,6 @@ export default function Home() {
     setIsScanning(false);
   };
 
-  // Export Executive Markdown Dossier
   const handleExportDossier = () => {
     if (!scanResult) return;
     const { summary, executive_summary, nodes } = scanResult;
@@ -228,63 +233,49 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const handleStartReconClick = () => {
+    const el = document.getElementById("graph-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0d1117] text-slate-100 flex flex-col font-sans">
-      {/* Top Header / Navigation Bar */}
-      <header className="border-b border-white/[0.06] bg-[#0d1117]/90 backdrop-blur-xl sticky top-0 z-40 font-sans">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md shadow-sky-500/20 text-white font-bold">
-              <ShieldAlert className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-base font-bold tracking-tight text-slate-100">
-                  RECONFLOW<span className="text-sky-400">.AI</span>
-                </h1>
-                <span className="text-xs font-sans font-medium px-2.5 py-0.5 rounded-md bg-[#10253d] text-[#6fb2f5]">
-                  Track 01: AI Agents
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-normal">
-                Autonomous External Attack Surface Management & Threat Intelligence
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col font-sans selection:bg-[#B7E36A]/20 selection:text-[var(--foreground)]">
+      {/* Top Navbar */}
+      <Navbar onExportDossier={handleExportDossier} onStartReconClick={handleStartReconClick} />
 
-          {/* Right Header Badges & Actions */}
-          <div className="flex items-center gap-3">
-            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-400 bg-[#141a24] border border-white/[0.06] px-3 py-1.5 rounded-lg font-sans">
-              <span className="w-2 h-2 rounded-full bg-[#4ade9b]" />
-              SerpApi Hackathon 2026
-            </span>
+      {/* Hero Section with Particle Wave */}
+      <HeroSection onScanTarget={handleScan} isScanning={isScanning} />
 
-            <button
-              onClick={handleExportDossier}
-              className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-lg bg-[#141a24] hover:bg-[#1a2230] text-slate-200 border border-white/[0.08] hover:border-white/[0.18] transition-all duration-150 active:scale-95 shadow-sm cursor-pointer font-sans"
-              title="Download executive audit report in Markdown"
-            >
-              <Download className="w-3.5 h-3.5 text-[#6fb2f5]" />
-              <span>Export Dossier</span>
-            </button>
+      {/* Section 2: The Perimeter Problem */}
+      <ProblemSection />
+
+      {/* Section 3 & 5: Attack-Surface Graph & Live Workspace */}
+      <section id="graph-section" className="py-20 px-4 max-w-7xl w-full mx-auto space-y-6">
+        <div className="max-w-3xl mb-8">
+          <div className="inline-flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider mb-2">
+            <span>Live Workspace // Intelligence Graph</span>
           </div>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-100">
+            Interactive Attack-Surface Graph
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Execute target audits, explore connected nodes, inspect vulnerability evidence, and extract defensive playbooks.
+          </p>
         </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
         {/* Search Bar & Controls */}
         <SearchBar onScan={handleScan} isScanning={isScanning} />
 
         {/* Executive Threat Briefing Callout */}
         {scanResult?.executive_summary && (
-          <div className="p-4 rounded-xl bg-[#141a24] border border-white/[0.08] flex items-start gap-3.5 shadow-sm font-sans">
-            <div className="p-2 rounded-lg bg-[#10253d] text-[#6fb2f5] mt-0.5">
-              <Sparkles className="w-4 h-4" />
+          <div className="p-4 rounded-lg bg-[#0B0B0B] border border-zinc-800 flex items-start gap-3.5 shadow-sm font-mono text-xs">
+            <div className="p-2 rounded bg-[#111111] text-zinc-400 mt-0.5 border border-zinc-800">
+              <Sparkles className="w-4 h-4 text-[#B7E36A]" />
             </div>
-            <div className="flex-1 text-xs leading-relaxed text-slate-300">
-              <span className="font-semibold text-slate-100 block mb-1">
+            <div className="flex-1 leading-relaxed text-zinc-300 font-sans">
+              <span className="font-bold text-zinc-100 block mb-1 font-mono uppercase tracking-wider text-[11px]">
                 Executive Threat Briefing
               </span>
               {scanResult.executive_summary}
@@ -316,23 +307,27 @@ export default function Home() {
           <FindingDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
         </div>
 
-        {/* Autonomous Agent Thought Stream (Terminal Feed) */}
+        {/* Autonomous Agent Thought Stream */}
         <ThoughtStream thoughts={thoughts} isScanning={isScanning} />
-      </main>
+      </section>
+
+      {/* Section 4: How ReconFlow Works */}
+      <HowItWorksSection />
+
+      {/* Section 6: Findings & Remediation */}
+      <RemediationSection />
+
+      {/* Section 7: Capabilities */}
+      <CapabilitiesSection />
+
+      {/* Section 8: Pricing */}
+      <PricingSection />
+
+      {/* Section 9: Final CTA */}
+      <FinalCTASection onScanTarget={handleScan} />
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06] bg-[#0d1117] py-4 mt-8 font-sans">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <div>
-            Built with <strong className="text-slate-400 font-medium">serpapi-search-tools</strong> &amp;{" "}
-            <strong className="text-slate-400 font-medium">SerpApi MCP</strong> for SerpApi India Hackathon 2026.
-          </div>
-          <div>
-            Target: <span className="text-[#6fb2f5] font-mono">{scanResult?.summary?.target || "Standing By"}</span> |{" "}
-            <span className="text-emerald-400">Non-Intrusive Hybrid EASM (Search Intel + RFC Telemetry)</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

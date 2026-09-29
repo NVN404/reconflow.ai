@@ -22,126 +22,106 @@ export const ExternalNode = memo(({ data, selected }: ExternalNodeProps) => {
   const isCritical = data.severity === "CRITICAL";
   const cat = data.category;
 
-  // Strict Color Semantics: RED is exclusively reserved for confirmed critical security vulnerabilities
-  let icon = <Database className="w-3.5 h-3.5" />;
-  let iconTheme = "bg-[#3a2013] text-[#ff9d6b]";
+  let icon = <Database className="w-3.5 h-3.5 text-[#A0A09C]" />;
+  let iconTheme = "bg-[#111111] text-[#A0A09C] border-[#292929]";
   let borderTheme = selected
-    ? "border-orange-500 ring-2 ring-orange-500/20"
-    : "border-orange-500/40 hover:border-orange-400";
-  let handleColor = "!bg-[#ff9d6b]";
-  let badgeStyle = "bg-[#3a2013] text-[#ff9d6b]";
-  let zoneTag = "EXTERNAL ASSET";
+    ? "border-[#F7F7F5] ring-2 ring-[#B7E36A]/30 bg-[#111111] shadow-lg"
+    : "border-[#292929] hover:border-[#383838] hover:bg-[#111111]";
+  let handleColor = "!bg-[#6F6F6B]";
+  let badgeStyle = "bg-[#111111] text-[#A0A09C] border-[#292929]";
+  let zoneTag = "EXTERNAL INTEL";
 
   if (cat === "YOUTUBE_POC") {
-    // Calm Indigo theme — never red
-    icon = <Youtube className="w-3.5 h-3.5" />;
-    iconTheme = "bg-[#1e1b4b] text-[#818cf8]";
-    borderTheme = selected
-      ? "border-indigo-500 ring-2 ring-indigo-500/20"
-      : "border-indigo-500/40 hover:border-indigo-400";
-    handleColor = "!bg-[#818cf8]";
-    badgeStyle = "bg-[#1e1b4b] text-[#818cf8]";
+    icon = <Youtube className="w-3.5 h-3.5 text-[#A0A09C]" />;
     zoneTag = "EXPLOIT RADAR";
   } else if (cat === "MOBILE_APP") {
-    icon = <Smartphone className="w-3.5 h-3.5" />;
-    iconTheme = "bg-[#0f2e22] text-[#4ade9b]";
-    borderTheme = selected
-      ? "border-emerald-500 ring-2 ring-emerald-500/20"
-      : "border-emerald-500/40 hover:border-emerald-400";
-    handleColor = "!bg-[#4ade9b]";
-    badgeStyle = "bg-[#0f2e22] text-[#4ade9b]";
+    icon = <Smartphone className="w-3.5 h-3.5 text-[#A0A09C]" />;
     zoneTag = "MOBILE ASSET";
   } else if (cat === "NEWS_BREACH") {
-    icon = <Newspaper className="w-3.5 h-3.5" />;
-    iconTheme = "bg-[#10253d] text-[#6fb2f5]";
-    borderTheme = selected
-      ? "border-sky-500 ring-2 ring-sky-500/20"
-      : "border-sky-500/40 hover:border-sky-400";
-    handleColor = "!bg-[#6fb2f5]";
-    badgeStyle = "bg-[#10253d] text-[#6fb2f5]";
+    icon = <Newspaper className="w-3.5 h-3.5 text-[#A0A09C]" />;
     zoneTag = "THREAT INTEL";
-  } else if (cat === "GITHUB_LEAK") {
-    icon = <Github className="w-3.5 h-3.5" />;
+  } else if (cat === "GITHUB_LEAK" || cat === "GITHUB_REPO") {
+    icon = <Github className="w-3.5 h-3.5 text-[#A0A09C]" />;
     if (isCritical) {
-      iconTheme = "bg-[#3a1418] text-[#ff6b6a]";
+      iconTheme = "bg-rose-950/80 text-rose-300 border-rose-800/80";
       borderTheme = selected
-        ? "border-[#ff6b6a] ring-2 ring-[#ff6b6a]/20 shadow-red-500/10"
-        : "border-[#ff6b6a]/50 animate-pulse-subtle";
-      handleColor = "!bg-[#ff6b6a]";
-      badgeStyle = "bg-[#3a1418] text-[#ff6b6a]";
-      zoneTag = "CRITICAL SECRET";
+        ? "border-rose-400 ring-2 ring-rose-500/30 bg-[#111111] shadow-lg"
+        : "border-rose-900/60 hover:border-rose-700/80 hover:bg-[#111111]";
+      handleColor = "!bg-rose-400";
+      badgeStyle = "bg-rose-950/80 text-rose-300 border-rose-800/80";
+      zoneTag = "SECRET LEAK";
     } else {
-      iconTheme = "bg-[#281b3b] text-[#c084fc]";
-      borderTheme = selected
-        ? "border-purple-500 ring-2 ring-purple-500/20"
-        : "border-purple-500/40 hover:border-purple-400";
-      handleColor = "!bg-[#c084fc]";
-      badgeStyle = "bg-[#281b3b] text-[#c084fc]";
       zoneTag = "PUBLIC REPO";
     }
   } else if (cat === "TOKEN_LEAK" && isCritical) {
-    icon = <KeyRound className="w-3.5 h-3.5" />;
-    iconTheme = "bg-[#3a1418] text-[#ff6b6a]";
+    icon = <KeyRound className="w-3.5 h-3.5 text-rose-300" />;
+    iconTheme = "bg-rose-950/80 text-rose-300 border-rose-800/80";
     borderTheme = selected
-      ? "border-[#ff6b6a] ring-2 ring-[#ff6b6a]/20 shadow-red-500/10"
-      : "border-[#ff6b6a]/50 animate-pulse-subtle";
-    handleColor = "!bg-[#ff6b6a]";
-    badgeStyle = "bg-[#3a1418] text-[#ff6b6a]";
-    zoneTag = "VULNERABILITY";
+      ? "border-rose-400 ring-2 ring-rose-500/30 bg-[#111111] shadow-lg"
+      : "border-rose-900/60 hover:border-rose-700/80 hover:bg-[#111111]";
+    handleColor = "!bg-rose-400";
+    badgeStyle = "bg-rose-950/80 text-rose-300 border-rose-800/80";
+    zoneTag = "CREDENTIAL LEAK";
   } else if (cat === "DOCUMENT_LEAK") {
-    icon = <FileText className="w-3.5 h-3.5" />;
-    iconTheme = "bg-[#3a2b0a] text-[#ffc26b]";
-    borderTheme = selected
-      ? "border-amber-500 ring-2 ring-amber-500/20"
-      : "border-amber-500/40 hover:border-amber-400";
-    handleColor = "!bg-[#ffc26b]";
-    badgeStyle = "bg-[#3a2b0a] text-[#ffc26b]";
+    icon = <FileText className="w-3.5 h-3.5 text-[#B7E36A]" />;
+    iconTheme = "bg-[#111111] text-[#B7E36A] border-[#B7E36A]/30";
     zoneTag = "EXPOSED DOC";
   }
 
   return (
     <div
-      className={`relative w-[240px] p-4 rounded-xl bg-[#141a24] border border-dashed transition-all duration-200 shadow-md ${borderTheme}`}
+      className={`relative w-[260px] p-4 rounded-lg bg-[#0B0B0B] border border-dashed transition-all duration-200 cursor-pointer ${borderTheme}`}
     >
       <Handle
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
-        className={`${handleColor} !border-[#141a24] !w-2.5 !h-2.5`}
+        className={`${handleColor} !border-[#050505] !w-2.5 !h-2.5`}
       />
 
-      {/* Top Row: Icon + Type Label */}
-      <div className="flex items-center gap-2">
-        <div
-          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${iconTheme}`}
-        >
-          {icon}
+      {/* Top Row: Contextual Icon + Zone Tag */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border ${iconTheme}`}
+          >
+            {icon}
+          </div>
+          <span className="text-[10px] font-mono font-medium text-[#A0A09C] uppercase tracking-wider">
+            {zoneTag}
+          </span>
         </div>
-        <span className="text-xs font-medium text-slate-400">
-          {zoneTag}
+        <span
+          className={`text-[9px] font-mono font-semibold px-2 py-0.5 rounded border ${badgeStyle}`}
+        >
+          {data.engine || "EXTERNAL"}
         </span>
       </div>
 
-      {/* Middle: Title */}
+      {/* Middle Title */}
       <div className="mt-2.5">
-        <h4 className="text-sm font-semibold text-slate-100 truncate" title={data.label}>
+        <h4 className="text-xs font-semibold text-[#F7F7F5] truncate font-mono" title={data.label}>
           {data.label}
         </h4>
-        <p className="text-xs text-slate-400 truncate mt-0.5" title={data.metadata?.url}>
+        <p className="text-[11px] font-mono text-[#6F6F6B] truncate mt-0.5" title={data.metadata?.url}>
           {data.metadata?.url?.replace(/^https?:\/\//, "") || data.surface}
         </p>
       </div>
 
-      {/* Bottom Row: Badge + Surface */}
-      <div className="flex items-center justify-between gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06]">
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}
-        >
-          {data.engine || "EXTERNAL"}
+      {/* Bottom Row */}
+      <div className="flex items-center justify-between gap-1.5 mt-3 pt-2.5 border-t border-[#292929]">
+        <span className="text-[10px] font-mono text-[#6F6F6B] truncate max-w-[150px]">
+          {data.surface || "External Intel"}
         </span>
-        <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-          Source <ExternalLink className="w-2.5 h-2.5" />
+        <span className="text-[10px] font-mono text-[#A0A09C] flex items-center gap-1">
+          Source <ExternalLink className="w-2.5 h-2.5 text-[#6F6F6B]" />
         </span>
       </div>
+
+      <Handle
+        type="source"
+        position={isHorizontal ? Position.Right : Position.Bottom}
+        className={`${handleColor} !border-[#050505] !w-2.5 !h-2.5`}
+      />
     </div>
   );
 });

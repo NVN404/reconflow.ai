@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Sparkles, Globe2, Radio, Zap, CheckCircle2 } from "lucide-react";
+import { Search, Globe2, Radio, CheckCircle2 } from "lucide-react";
 
 interface SearchBarProps {
   onScan: (domain: string, enablePhase2: boolean) => void;
@@ -22,101 +22,87 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
   };
 
   return (
-    <div className="w-full space-y-3">
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-center gap-3">
+    <div className="w-full space-y-3 font-mono">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-2.5">
         {/* Input Field */}
         <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-            <Globe2 className="w-4 h-4 text-sky-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+            <Globe2 className="w-4 h-4 text-zinc-500" />
           </div>
           <input
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="Enter target domain (e.g. reconflow.ai, yourcompany.com)"
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0f141c]/90 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-sm font-mono shadow-inner"
+            placeholder="Enter target domain (e.g. reconflow.ai)"
+            className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0B0B0B] border border-[#292929] text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#B7E36A] transition-all text-xs shadow-inner"
             disabled={isScanning}
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
-          {/* Main Recon Trigger */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="submit"
             disabled={isScanning}
-            className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition-all duration-150 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="flex-1 sm:flex-none px-5 py-3 rounded-lg bg-zinc-100 hover:bg-white text-[#050505] font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isScanning ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Sweeping All Engines...</span>
+                <span className="w-3.5 h-3.5 border-2 border-[#050505] border-t-transparent rounded-full animate-spin" />
+                <span>Sweeping Engines...</span>
               </>
             ) : (
               <>
-                <Search className="w-4 h-4" />
-                <span>Execute Live Recon</span>
+                <Search className="w-3.5 h-3.5" />
+                <span>Execute Recon</span>
               </>
             )}
           </button>
 
-          {/* Quick Target Button */}
           <button
             type="button"
             onClick={() => handleQuickTarget("reconflow.ai")}
             disabled={isScanning}
-            className="px-4 py-3 rounded-xl bg-[#0f141c]/90 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-sky-300 font-medium text-xs shadow-md transition-all duration-150 active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+            className="px-3.5 py-3 rounded-lg bg-[#0B0B0B] hover:bg-[#111111] border border-[#292929] text-zinc-300 font-medium text-xs transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             title="Scan verified domain reconflow.ai"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Target: reconflow.ai</span>
+            <span>Preset: reconflow.ai</span>
           </button>
         </div>
       </form>
 
       {/* Mode Controls */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-1 gap-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Hybrid Recon (Passive Search + Light-Touch Telemetry)</span>
+      <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-1 gap-2 border-t border-zinc-800/60">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-zinc-200">
+            <Radio className="w-3 h-3 text-emerald-500" />
+            <span>Hybrid Recon (Passive Intel + Telemetry)</span>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer select-none opacity-90 hover:opacity-100 transition">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-zinc-400 hover:text-zinc-200">
             <input
               type="checkbox"
               checked={enablePhase2}
               onChange={(e) => setEnablePhase2(e.target.checked)}
-              className="rounded bg-slate-900 border-slate-700 text-purple-500 focus:ring-purple-400 focus:ring-offset-slate-950"
+              className="rounded bg-[#111111] border-[#292929] text-[#B7E36A] focus:ring-[#B7E36A]"
             />
-            <span className="font-mono text-purple-300">Phase 2: Threat Radar (YouTube / Play / GitHub / S3)</span>
+            <span>Phase 2: Threat Radar (GitHub / S3 / YouTube)</span>
           </label>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* 100% Pure SerpApi Engines Status */}
-          <div className="flex items-center gap-1.5 font-mono text-[11px] flex-wrap">
-            <span className="text-sky-400 font-semibold flex items-center gap-1 mr-1">
-              <Zap className="w-3 h-3 text-amber-400" />
-              SerpApi Engines:
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-zinc-500">Engines:</span>
+          {(["Google", "Bing", "DuckDuckGo", "YouTube", "Play"] as const).map((engine) => (
+            <span
+              key={engine}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0B0B0B] border border-[#292929] text-zinc-400 text-[10px]"
+            >
+              <CheckCircle2 className="w-2.5 h-2.5 text-zinc-500" />
+              {engine}
             </span>
-            {(["Google", "Bing", "DuckDuckGo", "YouTube", "Google News", "Google Play"] as const).map((engine) => (
-              <span
-                key={engine}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-950/40 border border-sky-800/40 text-sky-300 font-mono text-[10px]"
-              >
-                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
-                {engine}
-              </span>
-            ))}
-          </div>
-
-          <div className="font-mono text-[11px] text-slate-400 hidden xl:block">
-            Orchestration: <span className="text-cyan-400 font-semibold">6 SerpApi Engines (Pure Dorking)</span>
-          </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
-

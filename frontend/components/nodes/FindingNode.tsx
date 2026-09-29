@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { FileCode2, ShieldAlert, ShieldCheck } from "lucide-react";
+import { FileCode2, ShieldAlert, AlertTriangle, ShieldCheck } from "lucide-react";
 import { NodeData } from "@/lib/types";
 
 interface FindingNodeProps {
@@ -11,54 +11,60 @@ interface FindingNodeProps {
 const getSeverityStyles = (severity: string, isClean = false) => {
   if (isClean) {
     return {
-      label: "Secure",
-      badge: "bg-[#0f2e22] text-[#4ade9b]",
-      iconBg: "bg-[#0f2e22] text-[#4ade9b]",
-      handle: "!bg-[#4ade9b]",
-      border: "border-emerald-500/40 hover:border-emerald-400/80 shadow-emerald-950/20",
+      label: "SECURE",
+      badge: "bg-emerald-950/80 text-emerald-400 border border-emerald-800/60",
+      iconBg: "bg-emerald-950/80 text-emerald-400 border border-emerald-800/60",
+      handle: "!bg-emerald-400",
+      border: "border-emerald-900/50 hover:border-emerald-700/70",
+      selectedBorder: "border-emerald-400 ring-2 ring-emerald-500/30",
     };
   }
 
   switch (severity?.toUpperCase()) {
     case "CRITICAL":
       return {
-        label: "Critical",
-        badge: "bg-[#3a1418] text-[#ff6b6a]",
-        iconBg: "bg-[#3a1418] text-[#ff6b6a]",
-        handle: "!bg-[#ff6b6a]",
-        border: "border-[#ff6b6a]/50 hover:border-[#ff6b6a] shadow-red-950/30",
+        label: "CRITICAL",
+        badge: "bg-rose-950/90 text-rose-300 border border-rose-800/80",
+        iconBg: "bg-rose-950/80 text-rose-400 border border-rose-800/80",
+        handle: "!bg-rose-400",
+        border: "border-rose-900/60 hover:border-rose-700/80",
+        selectedBorder: "border-rose-400 ring-2 ring-rose-500/30 shadow-rose-950/30",
       };
     case "HIGH":
       return {
-        label: "High",
-        badge: "bg-[#3a2013] text-[#ff9d6b]",
-        iconBg: "bg-[#3a2013] text-[#ff9d6b]",
-        handle: "!bg-[#ff9d6b]",
-        border: "border-orange-500/40 hover:border-orange-400 shadow-orange-950/20",
+        label: "HIGH",
+        badge: "bg-orange-950/80 text-orange-300 border border-orange-800/60",
+        iconBg: "bg-orange-950/80 text-orange-400 border border-orange-800/60",
+        handle: "!bg-orange-400",
+        border: "border-orange-900/50 hover:border-orange-700/70",
+        selectedBorder: "border-orange-400 ring-2 ring-orange-500/30",
       };
     case "MEDIUM":
       return {
-        label: "Medium",
-        badge: "bg-[#3a2b0a] text-[#ffc26b]",
-        iconBg: "bg-[#3a2b0a] text-[#ffc26b]",
-        handle: "!bg-[#ffc26b]",
-        border: "border-amber-500/30 hover:border-amber-400 shadow-amber-950/20",
+        label: "MEDIUM",
+        badge: "bg-[#111111] text-[#F7F7F5] border border-[#292929]",
+        iconBg: "bg-[#111111] text-[#F7F7F5] border border-[#292929]",
+        handle: "!bg-[#6F6F6B]",
+        border: "border-[#292929] hover:border-[#383838]",
+        selectedBorder: "border-[#F7F7F5] ring-2 ring-[#B7E36A]/30",
       };
     case "LOW":
       return {
-        label: "Low",
-        badge: "bg-[#0f2e22] text-[#4ade9b]",
-        iconBg: "bg-[#0f2e22] text-[#4ade9b]",
-        handle: "!bg-[#4ade9b]",
-        border: "border-emerald-500/30 hover:border-emerald-400",
+        label: "LOW",
+        badge: "bg-[#111111] text-[#A0A09C] border border-[#292929]",
+        iconBg: "bg-[#111111] text-[#A0A09C] border border-[#292929]",
+        handle: "!bg-[#6F6F6B]",
+        border: "border-[#292929] hover:border-[#383838]",
+        selectedBorder: "border-[#F7F7F5] ring-2 ring-[#F7F7F5]/20",
       };
     default:
       return {
-        label: "Info",
-        badge: "bg-[#10253d] text-[#6fb2f5]",
-        iconBg: "bg-[#10253d] text-[#6fb2f5]",
-        handle: "!bg-[#6fb2f5]",
-        border: "border-sky-500/30 hover:border-sky-400",
+        label: "INFO",
+        badge: "bg-[#111111] text-[#A0A09C] border border-[#292929]",
+        iconBg: "bg-[#111111] text-[#A0A09C] border border-[#292929]",
+        handle: "!bg-[#6F6F6B]",
+        border: "border-[#292929] hover:border-[#383838]",
+        selectedBorder: "border-[#F7F7F5] ring-2 ring-[#F7F7F5]/20",
       };
   }
 };
@@ -67,73 +73,81 @@ export const FindingNode = memo(({ data, selected }: FindingNodeProps) => {
   const isHorizontal = data.layoutDirection === "LR";
   const isCleanStatus = data.category === "VULN_STATUS_CLEAN";
   const isCritical = data.severity === "CRITICAL" && !isCleanStatus;
+  const isHigh = data.severity === "HIGH" && !isCleanStatus;
   const styles = getSeverityStyles(data.severity, isCleanStatus);
 
   return (
     <div
-      className={`relative w-[240px] p-4 rounded-xl bg-[#141a24] border transition-all duration-200 shadow-md ${
-        isCleanStatus
-          ? selected
-            ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-emerald-500/10"
-            : styles.border
-          : isCritical
-          ? selected
-            ? "border-[#ff6b6a] ring-2 ring-[#ff6b6a]/20 shadow-red-500/10"
-            : "border-[#ff6b6a]/50 animate-pulse-subtle shadow-red-950/30"
-          : selected
-          ? "border-amber-400/60 ring-2 ring-amber-400/20"
-          : styles.border
+      className={`relative w-[260px] p-4 rounded-lg bg-[#0B0B0B] border transition-all duration-200 cursor-pointer ${
+        selected
+          ? `${styles.selectedBorder} bg-[#111111] shadow-lg`
+          : `${styles.border} hover:bg-[#111111]`
       }`}
     >
       <Handle
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
-        className={`${styles.handle} !border-[#141a24] !w-2.5 !h-2.5`}
+        className={`${styles.handle} !border-[#050505] !w-2.5 !h-2.5`}
       />
 
-      {/* Top Row: Icon + Type Label */}
-      <div className="flex items-center gap-2">
-        <div
-          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${styles.iconBg}`}
-        >
-          {isCleanStatus ? (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          ) : isCritical ? (
-            <ShieldAlert className="w-3.5 h-3.5 text-[#ff6b6a]" />
-          ) : (
-            <FileCode2 className="w-3.5 h-3.5" />
-          )}
+      {/* Top Row: Icon + Classification + Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${styles.iconBg}`}
+          >
+            {isCleanStatus ? (
+              <ShieldCheck className="w-3.5 h-3.5" />
+            ) : isCritical ? (
+              <ShieldAlert className="w-3.5 h-3.5" />
+            ) : isHigh ? (
+              <AlertTriangle className="w-3.5 h-3.5" />
+            ) : (
+              <FileCode2 className="w-3.5 h-3.5" />
+            )}
+          </div>
+          <span className="text-[10px] font-mono font-medium text-[#A0A09C] uppercase tracking-wider">
+            {isCleanStatus ? "Posture Check" : "Vulnerability"}
+          </span>
         </div>
-        <span className="text-xs font-medium text-slate-400">
-          {isCleanStatus ? "Perimeter Posture" : "Internal Finding"}
+        <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded ${styles.badge}`}>
+          {isCleanStatus ? "SECURE" : styles.label}
         </span>
       </div>
 
-      {/* Middle: Title */}
+      {/* Title & Target Endpoint */}
       <div className="mt-2.5">
-        <h4 className="text-sm font-semibold text-slate-100 truncate" title={data.label}>
+        <h4 className="text-xs font-semibold text-[#F7F7F5] truncate font-mono" title={data.label}>
           {data.label}
         </h4>
-        <p className="text-xs text-slate-400 truncate mt-0.5" title={data.metadata?.url}>
+        <p className="text-[11px] font-mono text-[#6F6F6B] truncate mt-0.5" title={data.metadata?.url}>
           {isCleanStatus
-            ? "All perimeter gateways verified"
+            ? "Perimeter verified clean"
             : data.metadata?.url?.replace(/^https?:\/\//, "") || data.surface}
         </p>
       </div>
 
-      {/* Bottom Row: Severity Badge + CWE Tag */}
-      <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06]">
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${styles.badge}`}
-        >
-          {isCleanStatus ? "PERIMETER SECURE" : styles.label}
+      {/* Bottom Row: Standards & CVSS */}
+      <div className="flex items-center justify-between gap-1.5 mt-3 pt-2.5 border-t border-[#292929]">
+        <span className="text-[10px] font-mono text-[#A0A09C] truncate max-w-[130px]">
+          {data.cwe_id || data.surface || "Security Triage"}
         </span>
-        {data.cwe_id && (
-          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
-            {data.cwe_id}
+        {data.cvss_score ? (
+          <span className="text-[10px] font-mono font-bold text-rose-400">
+            CVSS {data.cvss_score}
+          </span>
+        ) : (
+          <span className="text-[10px] font-mono text-[#6F6F6B]">
+            {data.engine || "PASSIVE"}
           </span>
         )}
       </div>
+
+      <Handle
+        type="source"
+        position={isHorizontal ? Position.Right : Position.Bottom}
+        className={`${styles.handle} !border-[#050505] !w-2.5 !h-2.5`}
+      />
     </div>
   );
 });

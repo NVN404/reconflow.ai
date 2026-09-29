@@ -3,65 +3,65 @@
 @tailwind utilities;
 
 :root {
-  --background: #0d1117;
-  --foreground: #f1f5f9;
+  --background: #050505;
+  --foreground: #F7F7F5;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   overflow-x: hidden;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #080808;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: #292929;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #383838;
 }
 
-/* React Flow Custom Dark Styling */
+/* React Flow Custom Theme Styling */
 .react-flow__background {
-  background-color: #0d1117 !important;
+  background-color: #050505 !important;
 }
 
 .react-flow__controls {
-  background-color: #0f172a !important;
-  border: 1px solid #1e293b !important;
-  border-radius: 10px !important;
+  background-color: #0B0B0B !important;
+  border: 1px solid #292929 !important;
+  border-radius: 8px !important;
   overflow: hidden !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
 }
 
 .react-flow__controls-button {
-  background-color: #0f172a !important;
-  border-bottom: 1px solid #1e293b !important;
-  fill: #94a3b8 !important;
+  background-color: #0B0B0B !important;
+  border-bottom: 1px solid #1C1C1C !important;
+  fill: #6F6F6B !important;
   transition: all 150ms ease !important;
 }
 
 .react-flow__controls-button:hover {
-  background-color: #1e293b !important;
-  fill: #38bdf8 !important;
+  background-color: #111111 !important;
+  fill: #B7E36A !important;
 }
 
 .react-flow__minimap {
-  background-color: #0f172a !important;
-  border: 1px solid #1e293b !important;
-  border-radius: 10px !important;
+  background-color: #080808 !important;
+  border: 1px solid #292929 !important;
+  border-radius: 8px !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
 }
 
@@ -81,22 +81,10 @@ body {
 
 .react-flow__edge.animated .react-flow__edge-path {
   stroke-dasharray: 6;
-  animation: edgeFlow 1.4s linear infinite;
+  animation: edgeFlow 1.6s linear infinite;
 }
 
-/* Soft Pulse for Critical Nodes */
-@keyframes pulseSubtle {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(226, 75, 74, 0);
-    border-color: rgba(226, 75, 74, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 14px 2px rgba(226, 75, 74, 0.25);
-    border-color: rgba(226, 75, 74, 0.9);
-  }
+/* Radial Gradients & Utilities */
+.bg-radial {
+  background-image: radial-gradient(var(--tw-gradient-stops));
 }
-
-.animate-pulse-subtle {
-  animation: pulseSubtle 2.5s ease-in-out infinite;
-}
-
