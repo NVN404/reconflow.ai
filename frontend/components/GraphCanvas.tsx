@@ -150,11 +150,20 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
     ).length;
   }, [nodes]);
 
+  const externalCount = useMemo(() => {
+    return nodes.filter(
+      (n) =>
+        (n.data as any)?.origin === "EXTERNAL" ||
+        n.type === "externalExposureNode" ||
+        ["CUSTOM_DORK", "S3_LEAK", "GITHUB_LEAK", "GITHUB_REPO", "YOUTUBE_POC", "MOBILE_APP", "NEWS_BREACH", "BRAND_PRESENCE"].includes((n.data as any)?.category)
+    ).length;
+  }, [nodes]);
+
   return (
     <div className="w-full h-[640px] rounded-xl border border-zinc-800 bg-[#050505] shadow-2xl relative overflow-hidden flex flex-col">
       {/* Canvas Header Bar */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between pointer-events-none gap-2">
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
           {/* Zone 1: Assets & Topology */}
           <div className="flex items-center gap-2 bg-[#0B0B0B]/95 backdrop-blur-md px-3 py-1.5 rounded-md border border-zinc-800 text-xs font-mono text-zinc-100 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-zinc-400" />
@@ -190,6 +199,17 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
               </>
             )}
           </div>
+
+          {/* Phase 2: Threat Radar Badge */}
+          {externalCount > 0 && (
+            <div className="flex items-center gap-2 bg-[#120822]/95 backdrop-blur-md px-3 py-1.5 rounded-md border border-purple-800/80 text-xs font-mono text-purple-300 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="font-semibold text-xs tracking-tight">PHASE 2: THREAT RADAR</span>
+              <span className="px-1.5 py-0.2 rounded bg-purple-900/50 text-[10px] font-bold text-purple-200">
+                {externalCount}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Layout Switcher */}

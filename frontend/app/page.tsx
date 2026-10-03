@@ -58,7 +58,7 @@ export default function Home() {
     {
       timestamp: "READY",
       stage: "READY",
-      message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
+      message: "100% Pure SerpApi Autonomous Recon active (Passive Search Intelligence). Ready to audit target perimeter.",
       status: "success",
     },
   ]);
@@ -75,7 +75,7 @@ export default function Home() {
       {
         timestamp: now,
         stage: "READY",
-        message: "Hybrid Recon mode active (Passive Search Intelligence + Light-Touch Telemetry). Ready to audit target perimeter.",
+        message: "100% Pure SerpApi Autonomous Recon active (Passive Search Intelligence). Ready to audit target perimeter.",
         status: "success",
       },
     ]);
@@ -94,7 +94,19 @@ export default function Home() {
         (n) =>
           n.type === "rootNode" ||
           (n.data as any).severity === activeFilter ||
-          (n.data as any).section === activeFilter
+          (n.data as any).section === activeFilter ||
+          (activeFilter === "THREAT_RADAR" && (
+            (n.data as any).origin === "EXTERNAL" ||
+            n.type === "externalExposureNode" ||
+            (n.data as any).category === "CUSTOM_DORK" ||
+            (n.data as any).category === "S3_LEAK" ||
+            (n.data as any).category === "GITHUB_LEAK" ||
+            (n.data as any).category === "GITHUB_REPO" ||
+            (n.data as any).category === "YOUTUBE_POC" ||
+            (n.data as any).category === "MOBILE_APP" ||
+            (n.data as any).category === "NEWS_BREACH" ||
+            (n.data as any).category === "BRAND_PRESENCE"
+          ))
       );
     }
 
@@ -110,7 +122,13 @@ export default function Home() {
     );
   }, [scanResult, activeFilter, layoutDirection]);
 
-  const handleScan = async (domain: string, enablePhase2: boolean = true) => {
+  // Handle Live Scan Request
+  const handleScan = async (
+    domain: string,
+    enablePhase2: boolean = true,
+    customDorks: string[] = [],
+    enabledVectors?: Record<string, boolean>
+  ) => {
     setIsScanning(true);
     setSelectedNode(null);
 
@@ -138,6 +156,8 @@ export default function Home() {
           domain,
           enable_phase2: enablePhase2,
           use_cache: false,
+          custom_dorks: customDorks,
+          enabled_vectors: enabledVectors,
         }),
       });
 

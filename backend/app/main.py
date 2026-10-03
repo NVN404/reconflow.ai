@@ -38,7 +38,13 @@ def run_recon_scan(req: ScanRequest):
     if not req.domain or not req.domain.strip():
         raise HTTPException(status_code=400, detail="Target domain must not be empty.")
     
-    result = scanner.scan(target=req.domain, use_cache=req.use_cache, enable_phase2=req.enable_phase2)
+    result = scanner.scan(
+        target=req.domain,
+        use_cache=req.use_cache,
+        enable_phase2=req.enable_phase2,
+        custom_dorks=req.custom_dorks,
+        enabled_vectors=req.enabled_vectors
+    )
     return result
 
 

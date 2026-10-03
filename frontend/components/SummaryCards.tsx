@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldAlert, ShieldCheck, AlertTriangle, Cpu, Zap } from "lucide-react";
+import { ShieldAlert, ShieldCheck, AlertTriangle, Cpu, Zap, Radar } from "lucide-react";
 import { ScanSummary } from "@/lib/types";
 
 interface SummaryCardsProps {
@@ -31,7 +31,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   return (
     <div className="space-y-3 font-mono">
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Security Health Score */}
         <div className="p-4 rounded-lg bg-[#0B0B0B] border border-[#292929] flex items-center justify-between shadow-sm">
           <div>
@@ -150,6 +150,30 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           </div>
           <p className="text-2xl font-bold text-zinc-100 mt-1.5">
             {summary.low_risks}
+          </p>
+        </button>
+
+        {/* Threat Radar (Phase 2 External Intel) */}
+        <button
+          onClick={() => onFilterChange(activeFilter === "THREAT_RADAR" ? "ALL" : "THREAT_RADAR")}
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
+            activeFilter === "THREAT_RADAR"
+              ? "bg-purple-950/80 border-purple-600 ring-1 ring-purple-500/50"
+              : (summary.external_threat_count || 0) > 0
+              ? "bg-[#140b24]/90 border-purple-800/80 hover:border-purple-600"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className={`text-[11px] font-medium uppercase tracking-wider ${
+              (summary.external_threat_count || 0) > 0 ? "text-purple-300" : "text-zinc-400"
+            }`}>
+              Threat Radar
+            </p>
+            <Radar className={`w-4 h-4 ${(summary.external_threat_count || 0) > 0 ? "text-purple-400" : "text-zinc-500"}`} />
+          </div>
+          <p className={`text-2xl font-bold mt-1.5 ${(summary.external_threat_count || 0) > 0 ? "text-purple-200" : "text-zinc-100"}`}>
+            {summary.external_threat_count || 0}
           </p>
         </button>
 
