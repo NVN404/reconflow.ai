@@ -16,37 +16,37 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   const getGradeColor = (grade: string) => {
     switch (grade) {
       case "A":
-        return "bg-[#0f2e22] text-[#4ade9b]";
+        return "bg-emerald-950 text-emerald-400 border border-emerald-800/80";
       case "B":
-        return "bg-[#10253d] text-[#6fb2f5]";
+        return "bg-zinc-800 text-zinc-100 border border-zinc-700";
       case "C":
-        return "bg-[#3a2b0a] text-[#ffc26b]";
+        return "bg-[#B7E36A]/10 text-[#B7E36A] border border-[#B7E36A]/30";
       case "D":
-        return "bg-[#3a2013] text-[#ff9d6b]";
+        return "bg-orange-950 text-orange-400 border border-orange-800";
       default:
-        return "bg-[#3a1418] text-[#ff6b6a]";
+        return "bg-rose-950 text-rose-400 border border-rose-800";
     }
   };
 
   return (
-    <div className="space-y-3 font-sans">
-      {/* Top Metric Cards */}
+    <div className="space-y-3 font-mono">
+      {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Security Health Grade */}
-        <div className="p-4 rounded-xl bg-[#141a24] border-0 flex items-center justify-between shadow-sm">
+        {/* Security Health Score */}
+        <div className="p-4 rounded-lg bg-[#0B0B0B] border border-[#292929] flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-xs font-medium text-slate-400">
-              Health Grade
+            <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+              Posture Grade
             </p>
-            <div className="flex items-baseline gap-1 mt-2">
-              <span className="text-[26px] font-medium text-slate-100">
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="text-2xl font-bold text-zinc-100">
                 {summary.security_score}
               </span>
-              <span className="text-xs text-slate-400">/100</span>
+              <span className="text-xs text-zinc-500">/100</span>
             </div>
           </div>
           <div
-            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${getGradeColor(
+            className={`w-9 h-9 rounded flex items-center justify-center font-bold text-sm ${getGradeColor(
               summary.security_grade
             )}`}
           >
@@ -54,63 +54,61 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           </div>
         </div>
 
-        {/* Critical Exposures (RED ONLY IF > 0) */}
+        {/* Critical Exposures */}
         <button
           onClick={() => onFilterChange(activeFilter === "CRITICAL" ? "ALL" : "CRITICAL")}
-          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
             activeFilter === "CRITICAL"
-              ? summary.critical_risks > 0
-                ? "bg-[#3a1418] ring-2 ring-[#ff6b6a]/40"
-                : "bg-slate-800/60 ring-2 ring-slate-600/40"
+              ? "bg-rose-950/80 border-rose-600 ring-1 ring-rose-500/50"
               : summary.critical_risks > 0
-              ? "bg-[#3a1418]/60 hover:bg-[#3a1418] ring-1 ring-[#ff6b6a]/40"
-              : "bg-[#141a24] hover:bg-[#1a2230]"
+              ? "bg-rose-950/50 border-rose-800/80 hover:border-rose-600"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-medium ${
-              summary.critical_risks > 0 ? "text-[#ff6b6a]" : "text-slate-400"
+            <p className={`text-[11px] font-medium uppercase tracking-wider ${
+              summary.critical_risks > 0 ? "text-rose-400" : "text-zinc-400"
             }`}>
               Critical
             </p>
             {summary.critical_risks > 0 ? (
-              <ShieldAlert className="w-4 h-4 text-[#ff6b6a]" />
+              <ShieldAlert className="w-4 h-4 text-rose-400" />
             ) : (
-              <ShieldCheck className="w-4 h-4 text-[#4ade9b]" />
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
             )}
           </div>
-          <div className="flex items-baseline gap-1 mt-2">
-            <span className={`text-[26px] font-medium ${
-              summary.critical_risks > 0 ? "text-[#ff6b6a]" : "text-[#4ade9b]"
+          <div className="flex items-baseline gap-1 mt-1.5">
+            <span className={`text-2xl font-bold ${
+              summary.critical_risks > 0 ? "text-rose-400" : "text-emerald-500"
             }`}>
               {summary.critical_risks}
             </span>
             {summary.critical_risks === 0 && (
-              <span className="text-[10px] font-mono text-emerald-500/80">Clean</span>
+              <span className="text-[10px] text-emerald-500 font-semibold">Clean</span>
             )}
           </div>
         </button>
 
-        {/* High Risks */}
+        {/* High Risk */}
         <button
           onClick={() => onFilterChange(activeFilter === "HIGH" ? "ALL" : "HIGH")}
-          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
             activeFilter === "HIGH"
-              ? "bg-[#3a2013] ring-2 ring-[#ff9d6b]/40"
+              ? "bg-orange-950/80 border-orange-600 ring-1 ring-orange-500/50"
               : summary.high_risks > 0
-              ? "bg-[#3a2013]/60 hover:bg-[#3a2013] ring-1 ring-[#ff9d6b]/40"
-              : "bg-[#141a24] hover:bg-[#1a2230]"
+              ? "bg-orange-950/50 border-orange-800/80 hover:border-orange-600"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-medium ${
-              summary.high_risks > 0 ? "text-[#ff9d6b]" : "text-slate-400"
+            <p className={`text-[11px] font-medium uppercase tracking-wider ${
+              summary.high_risks > 0 ? "text-orange-400" : "text-zinc-400"
             }`}>
               High Risk
             </p>
-            <AlertTriangle className={`w-4 h-4 ${summary.high_risks > 0 ? "text-[#ff9d6b]" : "text-slate-500"}`} />
+            <AlertTriangle className={`w-4 h-4 ${summary.high_risks > 0 ? "text-orange-400" : "text-zinc-500"}`} />
           </div>
-          <p className={`text-[26px] font-medium mt-2 ${summary.high_risks > 0 ? "text-[#ff9d6b]" : "text-slate-300"}`}>
+          <p className={`text-2xl font-bold mt-1.5 ${summary.high_risks > 0 ? "text-orange-400" : "text-zinc-100"}`}>
             {summary.high_risks}
           </p>
         </button>
@@ -118,43 +116,39 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* Medium Exposures */}
         <button
           onClick={() => onFilterChange(activeFilter === "MEDIUM" ? "ALL" : "MEDIUM")}
-          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
             activeFilter === "MEDIUM"
-              ? "bg-[#3a2b0a] ring-2 ring-[#ffc26b]/40"
-              : summary.medium_risks > 0
-              ? "bg-[#3a2b0a]/60 hover:bg-[#3a2b0a] ring-1 ring-[#ffc26b]/40"
-              : "bg-[#141a24] hover:bg-[#1a2230]"
+              ? "bg-[#111111] border-[#383838] ring-1 ring-[#B7E36A]/40"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-medium ${
-              summary.medium_risks > 0 ? "text-[#ffc26b]" : "text-slate-400"
-            }`}>
+            <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
               Medium
             </p>
-            <AlertTriangle className={`w-4 h-4 ${summary.medium_risks > 0 ? "text-[#ffc26b]" : "text-slate-500"}`} />
+            <AlertTriangle className="w-4 h-4 text-zinc-500" />
           </div>
-          <p className={`text-[26px] font-medium mt-2 ${summary.medium_risks > 0 ? "text-[#ffc26b]" : "text-slate-300"}`}>
+          <p className="text-2xl font-bold text-zinc-100 mt-1.5">
             {summary.medium_risks}
           </p>
         </button>
 
-        {/* Subdomains / Infrastructure */}
+        {/* Subdomains / Assets */}
         <button
           onClick={() => onFilterChange(activeFilter === "LOW" ? "ALL" : "LOW")}
-          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
             activeFilter === "LOW"
-              ? "bg-[#10253d] ring-2 ring-[#6fb2f5]/40"
-              : "bg-[#141a24] hover:bg-[#1a2230]"
+              ? "bg-[#111111] border-[#B7E36A]/60"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-[#6fb2f5]">
+            <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
               Subdomains
             </p>
-            <Cpu className="w-4 h-4 text-[#6fb2f5]" />
+            <Cpu className="w-4 h-4 text-zinc-400" />
           </div>
-          <p className="text-[26px] font-medium text-slate-100 mt-2">
+          <p className="text-2xl font-bold text-zinc-100 mt-1.5">
             {summary.low_risks}
           </p>
         </button>
@@ -162,40 +156,42 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         {/* Threat Radar (Phase 2 External Intel) */}
         <button
           onClick={() => onFilterChange(activeFilter === "THREAT_RADAR" ? "ALL" : "THREAT_RADAR")}
-          className={`p-4 rounded-xl text-left transition-all duration-150 shadow-sm cursor-pointer active:scale-95 border-0 ${
+          className={`p-4 rounded-lg text-left transition-all shadow-sm cursor-pointer border ${
             activeFilter === "THREAT_RADAR"
-              ? "bg-[#251545] ring-2 ring-purple-400/50"
+              ? "bg-purple-950/80 border-purple-600 ring-1 ring-purple-500/50"
               : (summary.external_threat_count || 0) > 0
-              ? "bg-[#1e1435]/60 hover:bg-[#251545] ring-1 ring-purple-500/30"
-              : "bg-[#141a24] hover:bg-[#1a2230]"
+              ? "bg-[#140b24]/90 border-purple-800/80 hover:border-purple-600"
+              : "bg-[#0B0B0B] border-[#292929] hover:border-[#383838]"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-purple-300">
+            <p className={`text-[11px] font-medium uppercase tracking-wider ${
+              (summary.external_threat_count || 0) > 0 ? "text-purple-300" : "text-zinc-400"
+            }`}>
               Threat Radar
             </p>
-            <Radar className="w-4 h-4 text-purple-400" />
+            <Radar className={`w-4 h-4 ${(summary.external_threat_count || 0) > 0 ? "text-purple-400" : "text-zinc-500"}`} />
           </div>
-          <p className="text-[26px] font-medium text-purple-200 mt-2">
+          <p className={`text-2xl font-bold mt-1.5 ${(summary.external_threat_count || 0) > 0 ? "text-purple-200" : "text-zinc-100"}`}>
             {summary.external_threat_count || 0}
           </p>
         </button>
 
-        {/* SerpApi Credits Used */}
-        <div className="p-4 rounded-xl bg-[#141a24] border-0 flex items-center justify-between shadow-sm">
+        {/* SerpApi Credits */}
+        <div className="p-4 rounded-lg bg-[#0B0B0B] border border-[#292929] flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-xs font-medium text-[#6fb2f5]">
+            <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
               SerpApi Credits
             </p>
-            <div className="flex items-baseline gap-1 mt-2">
-              <span className="text-[26px] font-medium text-[#6fb2f5]">
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="text-2xl font-bold text-zinc-100">
                 {summary.serpapi_credits_used}
               </span>
-              <span className="text-xs text-slate-400">queries</span>
+              <span className="text-[10px] text-zinc-500">reqs</span>
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-[#10253d] text-[#6fb2f5]">
-            <Zap className="w-4 h-4" />
+          <div className="p-2 rounded bg-[#111111] text-zinc-400 border border-zinc-800">
+            <Zap className="w-4 h-4 text-[#B7E36A]" />
           </div>
         </div>
       </div>

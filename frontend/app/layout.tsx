@@ -5,11 +5,13 @@ import "./globals.css";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,10 +27,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#0d1117] text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-200 font-sans">
+      <body className="bg-[#050505] text-[#F7F7F5] antialiased selection:bg-[#B7E36A]/20 selection:text-[#B7E36A] font-sans">
         {children}
       </body>
     </html>
   );
 }
-

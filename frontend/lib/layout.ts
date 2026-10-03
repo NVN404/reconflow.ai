@@ -1,8 +1,39 @@
 import dagre from "dagre";
 import { GraphNode, GraphEdge } from "./types";
 
-const nodeWidth = 240;
-const nodeHeight = 85;
+// ---------------------------------------------------------------------------
+// Node dimension constants
+//
+// These MUST accurately reflect the actual rendered sizes of each custom node
+// so Dagre reserves the correct bounding box and avoids overlaps.
+//
+// All nodes share the same 260 px width (w-[260px] in Tailwind).
+//
+// Heights are measured from the JSX structure:
+//   p-4 (16px top + 16px bottom) = 32px padding
+//   Top row (icon 24px):                          24px
+//   mt-2.5 gap:                                   10px
+//   Title line (~18px) + url line (~16px):        34px
+//   mt-3 + pt-2.5 + border-t gap:                22px
+//   Bottom row (~16px):                           16px
+//   ------------------------------------------------
+//   Total rendered ≈                             138px
+//
+// We use 150px to add a small buffer for font-rendering differences across
+// browsers/OS while still being an honest measurement (not an inflated hack).
+// ---------------------------------------------------------------------------
+const NODE_WIDTH = 260;
+
+/** Height Dagre reserves for each node type (px). */
+const NODE_HEIGHTS: Record<string, number> = {
+  rootNode:     150, // same structure as asset — three content rows
+  assetNode:    150,
+  findingNode:  150, // three rows: header, title+url, CVSS bottom
+  externalNode: 150, // same three-row structure
+};
+
+/** Fallback when the type is unknown. */
+const DEFAULT_NODE_HEIGHT = 150;
 
 export const getLayoutedElements = (
   nodes: GraphNode[],
@@ -15,7 +46,7 @@ export const getLayoutedElements = (
 
   const isHorizontal = direction === "LR";
 
-  // Partition into Section 1 (Info & Assets) and Section 2 (Active Vulnerabilities)
+  // Partition into Zone 1 (Info & Host Assets) and Zone 2 (Active Vulnerabilities & External Intel)
   const infoNodes = nodes.filter((n) => (n.data as any)?.section !== "VULNERABILITY");
   const vulnNodes = nodes.filter((n) => (n.data as any)?.section === "VULNERABILITY");
 
@@ -32,15 +63,23 @@ export const getLayoutedElements = (
     g.setDefaultEdgeLabel(() => ({}));
     g.setGraph({
       rankdir: direction,
-      nodesep: isHorizontal ? 50 : 55,
-      ranksep: isHorizontal ? 150 : 85,
-      marginx: 35,
-      marginy: 35,
+      // nodesep = gap between sibling nodes on the same rank.
+      // Increase from 55/75 → 80/100 to ensure visible breathing room
+      // even when node heights are correctly measured at 150px.
+      nodesep: isHorizontal ? 80 : 100,
+      // ranksep = gap between ranks (layers).
+      // Increase to accommodate correct node heights and edge routing.
+      ranksep: isHorizontal ? 200 : 220,
+      marginx: 50,
+      marginy: 50,
     });
 
     const nodeIdSet = new Set(subNodes.map((n) => n.id));
+
     subNodes.forEach((node) => {
-      g.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+      // Look up the per-type height so Dagre reserves an accurate bounding box.
+      const h = NODE_HEIGHTS[(node.type as string) ?? ""] ?? DEFAULT_NODE_HEIGHT;
+      g.setNode(node.id, { width: NODE_WIDTH, height: h });
     });
 
     subEdges.forEach((edge) => {
@@ -51,19 +90,19 @@ export const getLayoutedElements = (
 
     dagre.layout(g);
 
-    let minX = Infinity,
-      maxX = -Infinity;
-    let minY = Infinity,
-      maxY = -Infinity;
+    let minX = Infinity,  maxX = -Infinity;
+    let minY = Infinity,  maxY = -Infinity;
 
     const layouted = subNodes.map((node) => {
+      const h = NODE_HEIGHTS[(node.type as string) ?? ""] ?? DEFAULT_NODE_HEIGHT;
       const pos = g.node(node.id);
-      const x = pos.x - nodeWidth / 2;
-      const y = pos.y - nodeHeight / 2;
+      // Dagre returns the CENTER of the node; convert to top-left corner.
+      const x = pos.x - NODE_WIDTH / 2;
+      const y = pos.y - h / 2;
       minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x + nodeWidth);
+      maxX = Math.max(maxX, x + NODE_WIDTH);
       minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y + nodeHeight);
+      maxY = Math.max(maxY, y + h);
       return {
         ...node,
         targetPosition: isHorizontal ? ("left" as const) : ("top" as const),
@@ -79,8 +118,8 @@ export const getLayoutedElements = (
       };
     });
 
-    const width = maxX > minX ? maxX - minX : 300;
-    const height = maxY > minY ? maxY - minY : 200;
+    const width  = maxX > minX ? maxX - minX : 320;
+    const height = maxY > minY ? maxY - minY : 220;
     return { layouted, width, height };
   };
 
@@ -90,9 +129,11 @@ export const getLayoutedElements = (
   // Layout Info Section (Zone 1)
   const infoResult = layoutSubGraph(infoNodes, validEdges, 40, 80);
 
-  // Layout Vulnerability Section (Zone 2) with spatial offset
-  const vulnOffsetX = isHorizontal ? 40 : Math.max(680, infoResult.width + 120);
-  const vulnOffsetY = isHorizontal ? Math.max(480, infoResult.height + 120) : 80;
+  // Layout Vulnerability Section (Zone 2) with spatial offset.
+  // The extra 160px buffer (was 120px) accounts for the increased node height
+  // so the two zones never bleed into each other.
+  const vulnOffsetX = isHorizontal ? 40 : Math.max(720, infoResult.width + 160);
+  const vulnOffsetY = isHorizontal ? Math.max(560, infoResult.height + 160) : 80;
   const vulnResult = layoutSubGraph(vulnNodes, validEdges, vulnOffsetX, vulnOffsetY);
 
   const finalNodes = [...infoResult.layouted, ...vulnResult.layouted];
