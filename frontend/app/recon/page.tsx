@@ -562,7 +562,7 @@ function ReconWorkspaceContent() {
         onVerified={handleCorporateVerified}
       />
 
-      {/* Mock Payment Checkout Modal (Hackathon Pro Activation) */}
+      {/* Stripe Payment Checkout Modal */}
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
@@ -570,6 +570,7 @@ function ReconWorkspaceContent() {
         planName="Professional Tier (Unlimited Sweeps)"
         price="$49 / month"
       />
+
     </div>
   );
 }
