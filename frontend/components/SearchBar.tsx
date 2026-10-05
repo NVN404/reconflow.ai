@@ -28,8 +28,9 @@ interface SearchBarProps {
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
-  const [domain, setDomain] = useState("reconflow.render.com");
+  const [domain, setDomain] = useState("vulnweb.com");
   const [enablePhase2, setEnablePhase2] = useState(true);
+
 
   const [showConfig, setShowConfig] = useState(false);
 
@@ -95,7 +96,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="Enter target domain (e.g. reconflow.render.com)"
+            placeholder="Enter target domain (e.g. vulnweb.com)"
             className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0B0B0B] border border-[#292929] text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#B7E36A] transition-all text-xs shadow-inner"
             disabled={isScanning}
           />
@@ -123,13 +124,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
 
           <button
             type="button"
-            onClick={() => handleQuickTarget("reconflow.render.com")}
+            onClick={() => handleQuickTarget("vulnweb.com")}
             disabled={isScanning}
             className="px-3.5 py-3 rounded-lg bg-[#0B0B0B] hover:bg-[#111111] border border-[#292929] text-zinc-300 font-medium text-xs transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
-            title="Scan verified domain reconflow.render.com"
+            title="Scan live security testbed vulnweb.com via SerpApi"
           >
-            <span>Preset: reconflow.render.com</span>
+            <span>Preset: vulnweb.com</span>
           </button>
+
 
 
           {/* Dork Strategy Config Toggle */}

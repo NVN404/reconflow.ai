@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
           className="flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-500 font-mono"
         >
           <span>Try target:</span>
-          {["reconflow.render.com"].map((target) => (
+          {["vulnweb.com", "reconflow.render.com"].map((target) => (
             <button
               key={target}
               onClick={() => handleChipClick(target)}
@@ -123,6 +123,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
               {target}
             </button>
           ))}
+
 
         </motion.div>
 

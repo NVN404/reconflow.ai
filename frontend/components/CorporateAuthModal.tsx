@@ -362,22 +362,23 @@ export const CorporateAuthModal: React.FC<CorporateAuthModalProps> = ({
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <button
                 type="button"
-                onClick={() => applyPreset("reconflow.render.com", "security@reconflow.render.com")}
+                onClick={() => applyPreset("vulnweb.com", "security@vulnweb.com")}
                 className="w-full p-2.5 rounded-lg bg-[#181818] hover:bg-[#202020] border border-zinc-800 text-left transition-all cursor-pointer group flex items-center justify-between"
               >
                 <div>
                   <div className="text-zinc-200 font-bold truncate group-hover:text-[#B7E36A]">
-                    reconflow.render.com
+                    vulnweb.com
                   </div>
                   <div className="text-[10px] text-zinc-500 truncate">
-                    security@reconflow.render.com
+                    security@vulnweb.com (100% Live SerpApi Sweep)
                   </div>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-[#B7E36A]/10 text-[#B7E36A] border border-[#B7E36A]/30 font-bold">
-                  Official Demo
+                  Live Testbed
                 </span>
               </button>
             </div>
+
 
 
             {/* Test Blocked Option */}

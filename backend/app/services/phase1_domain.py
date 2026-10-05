@@ -179,16 +179,16 @@ class Phase1DomainScanner:
             status="info"
         ))
 
-        # High-fidelity demo sandbox targets for hackathon evaluation (e.g. reconflow.render.com)
-        is_demo_target = any(k in clean_target for k in ["render.com", "sandbox", "demo", "corp", "example.com"])
-        if is_demo_target or not self.api_key:
+        # Only fallback to offline simulation if no SERPAPI_KEY is configured or explicit mock requested
+        if not self.api_key or clean_target in ["mock.local", "offline.test"]:
             thoughts.append(AgentThought(
                 timestamp=now,
                 stage="SANDBOX_EVAL",
-                message=f"Target '{clean_target}' identified as Hackathon Evaluation Perimeter. Generating comprehensive multi-engine attack surface topology.",
-                status="info"
+                message=f"No SERPAPI_KEY configured or offline mode requested. Generating simulated scan for '{clean_target}'.",
+                status="warning"
             ))
             return self._generate_simulated_scan(clean_target, thoughts)
+
 
         # LIVE MULTI-PASS SERPAPI RECONNAISSANCE
         subdomains: List[Dict[str, Any]] = []
