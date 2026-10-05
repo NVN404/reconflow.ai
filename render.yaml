@@ -1,0 +1,41 @@
+services:
+  # -------------------------------------------------------------
+  # ReconFlow AI - Backend API (FastAPI + SerpApi + Gemini Engine)
+  # -------------------------------------------------------------
+  - type: web
+    name: reconflow-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERPAPI_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+
+  # -------------------------------------------------------------
+  # ReconFlow AI - Frontend Web App (Next.js 14 + React Flow)
+  # -------------------------------------------------------------
+  - type: web
+    name: reconflow-frontend
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.16.0
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
