@@ -168,8 +168,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onUpgradeClick, 
                       const el = document.getElementById("graph-section");
                       if (el) el.scrollIntoView({ behavior: "smooth" });
                     } else {
-                      alert("Contact enterprise sales at security@reconflow.ai");
+                      alert("Contact enterprise sales at security@reconflow.render.com");
                     }
+
                   }}
                   className={`w-full py-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
                     plan.highlighted

@@ -223,17 +223,18 @@ export const CorporateAuthModal: React.FC<CorporateAuthModalProps> = ({
                     <Globe2 className="w-3.5 h-3.5 text-[#B7E36A]" />
                     <span>1. Target Perimeter Domain</span>
                   </label>
-                  <span className="text-[10px] text-zinc-500">e.g. reconflow.render.com, reconflow.ai</span>
+                  <span className="text-[10px] text-zinc-500">e.g. reconflow.render.com</span>
                 </div>
                 <div className="relative">
                   <input
                     type="text"
                     value={targetInput}
                     onChange={(e) => setTargetInput(e.target.value)}
-                    placeholder="Enter target company (e.g. reconflow.ai)"
+                    placeholder="Enter target company (e.g. reconflow.render.com)"
                     className="w-full px-3 py-2.5 rounded-lg bg-[#141414] border border-zinc-800 focus:border-[#B7E36A] focus:outline-none text-zinc-100 placeholder:text-zinc-600 text-xs font-mono shadow-inner"
                     autoFocus
                   />
+
                 </div>
               </div>
 
@@ -362,29 +363,22 @@ export const CorporateAuthModal: React.FC<CorporateAuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => applyPreset("reconflow.render.com", "security@reconflow.render.com")}
-                className="p-2 rounded bg-[#181818] hover:bg-[#202020] border border-zinc-800 text-left transition-all cursor-pointer group"
+                className="w-full p-2.5 rounded-lg bg-[#181818] hover:bg-[#202020] border border-zinc-800 text-left transition-all cursor-pointer group flex items-center justify-between"
               >
-                <div className="text-zinc-200 font-bold truncate group-hover:text-[#B7E36A]">
-                  reconflow.render.com
+                <div>
+                  <div className="text-zinc-200 font-bold truncate group-hover:text-[#B7E36A]">
+                    reconflow.render.com
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">
+                    security@reconflow.render.com
+                  </div>
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  security@reconflow.render.com
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => applyPreset("reconflow.ai", "security@reconflow.ai")}
-                className="p-2 rounded bg-[#181818] hover:bg-[#202020] border border-zinc-800 text-left transition-all cursor-pointer group"
-              >
-                <div className="text-zinc-200 font-bold truncate group-hover:text-[#B7E36A]">
-                  reconflow.ai
-                </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  security@reconflow.ai
-                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-[#B7E36A]/10 text-[#B7E36A] border border-[#B7E36A]/30 font-bold">
+                  Official Demo
+                </span>
               </button>
             </div>
+
 
             {/* Test Blocked Option */}
             <div className="pt-1.5 border-t border-zinc-800/70 flex items-center justify-between text-[10px]">

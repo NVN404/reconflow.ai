@@ -8,8 +8,9 @@ export const RemediationSection: React.FC = () => {
 
   const sampleFinding = {
     title: "Exposed Environment Configuration File",
-    target: "https://staging.reconflow.ai/.env",
+    target: "https://staging.reconflow.render.com/.env",
     severity: "CRITICAL",
+
     cvss: "9.1",
     cwe: "CWE-552: Files or Directories Accessible to External Parties",
     owasp: "A05:2021 Security Misconfiguration",
