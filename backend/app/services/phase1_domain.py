@@ -236,10 +236,122 @@ class Phase1DomainScanner:
         else:
             credits_used += 1
 
+        def inspect_result_for_vulnerabilities(res: Dict[str, Any], dork_str: str, eng: str):
+            link = res.get("link", "")
+            if not link:
+                return
+            title = res.get("title", "")
+            snip = res.get("snippet", "")
+            combined = f"{link} {title} {snip}".lower()
+            host = urlparse(link).netloc.lower()
+
+            if any(f.get("url") == link for f in findings):
+                return
+
+            # 1. SQL Injection in search results
+            if any(k in combined for k in ["union select", "union%20select", "select @@", "select%20@@", "sql injection", "vulnerable to sql", "substring(("]):
+                playbook = get_remediation_for_category("DATABASE_LEAK")
+                findings.append({
+                    "title": "SQL Injection & Database Exposure in Search Engine Index",
+                    "category": "DATABASE_LEAK",
+                    "severity": "CRITICAL",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or "Active SQL injection query and response indexed by search engine.",
+                    "dork": dork_str,
+                    "surface": "Search Engine Vulnerability Cache",
+                    "engine": eng,
+                    "what_is_the_bug": f"Search engine indexed an active SQL injection query parameter and database response at {link}.",
+                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                    "attack_vector": playbook.get("attack_vector"),
+                    "how_to_fix": playbook.get("how_to_fix"),
+                    "remediation": playbook.get("default_directive"),
+                    "owasp_tag": "OWASP A03:2021 — Injection",
+                    "cwe_id": "CWE-89: SQL Injection",
+                    "cvss_score": "9.4 (Critical)",
+                    "remediation_steps": playbook.get("remediation_steps", [])
+                })
+
+            # 2. Cross-Site Scripting (XSS)
+            elif any(k in combined for k in ["cross-site scripting", "cross site scripting", "<some_dangerous_input", "tfsearch=", "xss"]):
+                playbook = get_remediation_for_category("API_EXPOSURE")
+                findings.append({
+                    "title": "Reflected Cross-Site Scripting (XSS) Parameter Exposure",
+                    "category": "API_EXPOSURE",
+                    "severity": "HIGH",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or "Reflected input parameter detected in search index.",
+                    "dork": dork_str,
+                    "surface": "Search Engine Vulnerability Cache",
+                    "engine": eng,
+                    "what_is_the_bug": f"Search engine cached an endpoint reflecting unvalidated script inputs at {link}.",
+                    "why_it_is_a_bug": "Unsanitized user input reflected in HTTP responses allows arbitrary script execution in client browsers.",
+                    "attack_vector": "Adversaries craft malicious links containing script payloads targeting authenticated victim sessions.",
+                    "how_to_fix": "Enforce context-aware HTML entity encoding and configure strict Content Security Policy (CSP).",
+                    "remediation": "Deploy Content Security Policy (CSP) headers and encode dynamic query string outputs.",
+                    "owasp_tag": "OWASP A03:2021 — Injection / XSS",
+                    "cwe_id": "CWE-79: Cross-site Scripting",
+                    "cvss_score": "7.8 (High)",
+                    "remediation_steps": [
+                        "1. Implement contextual HTML entity encoding on all user-supplied URL parameters.",
+                        "2. Configure strict Content-Security-Policy (CSP) headers prohibiting inline script execution."
+                    ]
+                })
+
+            # 3. Directory Traversal / File Disclosure
+            elif any(k in combined for k in ["directory traversal", "path traversal", "file traversal"]):
+                playbook = get_remediation_for_category("STORAGE_EXPOSURE")
+                findings.append({
+                    "title": "Directory Traversal & Arbitrary File Disclosure",
+                    "category": "STORAGE_EXPOSURE",
+                    "severity": "HIGH",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or "Directory traversal vulnerability disclosed in search index.",
+                    "dork": dork_str,
+                    "surface": "Search Engine Vulnerability Cache",
+                    "engine": eng,
+                    "what_is_the_bug": f"Indexed path indicators show potential local file inclusion/traversal at {link}.",
+                    "why_it_is_a_bug": "Improper file path sanitization allows adversaries to retrieve arbitrary files from the filesystem.",
+                    "attack_vector": "Adversary manipulates file path parameters to read server configuration files.",
+                    "how_to_fix": "Validate and whitelist filenames; avoid using raw user inputs in file access APIs.",
+                    "remediation": "Restrict filesystem operations to a chrooted directory and sanitize all path inputs.",
+                    "owasp_tag": "OWASP A01:2021 — Broken Access Control",
+                    "cwe_id": "CWE-22: Path Traversal",
+                    "cvss_score": "8.2 (High)",
+                    "remediation_steps": playbook.get("remediation_steps", [])
+                })
+
+            # 4. Interactive API Documentation / Swagger
+            elif any(k in combined for k in ["vulnerable rest api", "rest api documentation", "swagger", "openapi"]) and not any(x in link.lower() for x in ["/blog", "/careers", "/news"]):
+                playbook = get_remediation_for_category("API_DOCS")
+                findings.append({
+                    "title": "Interactive REST API Documentation Console Exposed",
+                    "category": "API_DOCS",
+                    "severity": "MEDIUM",
+                    "host": host,
+                    "url": link,
+                    "snippet": snip or "Publicly accessible REST API documentation.",
+                    "dork": dork_str,
+                    "surface": "Interactive Documentation",
+                    "engine": eng,
+                    "what_is_the_bug": f"Publicly accessible interactive API specification console at {link}.",
+                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
+                    "attack_vector": playbook.get("attack_vector"),
+                    "how_to_fix": playbook.get("how_to_fix"),
+                    "remediation": playbook.get("default_directive"),
+                    "owasp_tag": playbook.get("owasp_tag"),
+                    "cwe_id": playbook.get("cwe_id"),
+                    "cvss_score": playbook.get("cvss_score"),
+                    "remediation_steps": playbook.get("remediation_steps", [])
+                })
+
         for res in p1_results:
             link = res.get("link", "")
             host = urlparse(link).netloc.lower()
             register_host(host, link, res.get("snippet", "Active subdomain asset."), pass1_query, "google")
+            inspect_result_for_vulnerabilities(res, pass1_query, "google")
 
         # --- PASS 1.1b: Multi-Engine Bing Expansion ---
         bing_query = f"site:{clean_target} -www.{clean_target}"
@@ -256,6 +368,7 @@ class Phase1DomainScanner:
                 link = res.get("link", "")
                 host = urlparse(link).netloc.lower()
                 register_host(host, link, res.get("snippet", "Cross-validated via Bing."), bing_query, "bing")
+                inspect_result_for_vulnerabilities(res, bing_query, "bing")
 
         # --- PASS 1.1c: Multi-Engine DuckDuckGo Expansion ---
         ddg_query = f"site:*.{clean_target} -www.{clean_target}"
@@ -272,6 +385,8 @@ class Phase1DomainScanner:
                 link = res.get("link", "")
                 host = urlparse(link).netloc.lower()
                 register_host(host, link, res.get("snippet", "Discovered via DuckDuckGo."), ddg_query, "duckduckgo")
+                inspect_result_for_vulnerabilities(res, ddg_query, "duckduckgo")
+
 
         # --- PASS 1.2: Authentication Gateways, Portals & Interactive Docs ---
         pass2_query = f"site:{clean_target} (inurl:admin OR inurl:login OR inurl:portal OR inurl:auth OR inurl:docs OR inurl:api OR inurl:app OR inurl:dashboard)"
