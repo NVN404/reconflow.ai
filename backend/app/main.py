@@ -71,7 +71,24 @@ def create_checkout_session(req: CheckoutSessionRequest):
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
 
 
+@app.get("/")
+def root_index():
+    return {
+        "status": "ok",
+        "service": "ReconFlow AI — EASM Agent API",
+        "track": "Track 01: AI Agents",
+        "documentation": "/docs",
+        "health": "/health",
+        "endpoints": [
+            "/api/scan",
+            "/api/create-checkout-session",
+            "/api/engines",
+            "/api/remediation"
+        ]
+    }
+
 @app.get("/health")
+@app.get("/healthz")
 @app.get("/api/health")
 def health_check():
     return {
@@ -81,6 +98,7 @@ def health_check():
         "track": "Track 01: AI Agents",
         "mcp_enabled": True
     }
+
 
 @app.post("/api/scan", response_model=ScanResult)
 def run_recon_scan(req: ScanRequest):

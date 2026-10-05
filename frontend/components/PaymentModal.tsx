@@ -43,8 +43,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setErrorMessage(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
-      const res = await fetch(`${apiUrl}/api/create-checkout-session`, {
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+      const checkoutEndpoint = cleanApiUrl ? `${cleanApiUrl}/api/create-checkout-session` : "/api/create-checkout-session";
+      const res = await fetch(checkoutEndpoint, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

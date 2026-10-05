@@ -193,8 +193,11 @@ function ReconWorkspaceContent() {
     ]);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
-      const res = await fetch(`${apiUrl}/api/scan`, {
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+      const scanEndpoint = cleanApiUrl ? `${cleanApiUrl}/api/scan` : "/api/scan";
+
+      const res = await fetch(scanEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -208,6 +211,7 @@ function ReconWorkspaceContent() {
 
       if (res.ok) {
         const data: ScanResult = await res.json();
+
         setScanResult(data);
         if (data.thoughts && data.thoughts.length > 0) {
           setThoughts(data.thoughts);
@@ -220,7 +224,7 @@ function ReconWorkspaceContent() {
           localStorage.setItem("reconflow_scan_count", newCount.toString());
         }
       } else {
-        throw new Error(`Backend returned status ${res.status}`);
+        throw new Error(`Endpoint ${scanEndpoint} returned HTTP ${res.status}`);
       }
     } catch (err: any) {
       console.error("Live scan failed:", err);
@@ -229,10 +233,11 @@ function ReconWorkspaceContent() {
         {
           timestamp: new Date().toLocaleTimeString("en-GB"),
           stage: "ERROR",
-          message: `Scan error: ${err?.message || "Failed to reach backend"}. Please verify backend on port 8001.`,
+          message: `Scan error: ${err?.message || "Failed to reach backend"}. Please check your backend URL configuration.`,
           status: "critical",
         },
       ]);
+
     } finally {
       setIsScanning(false);
     }
