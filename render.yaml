@@ -26,8 +26,9 @@ services:
   # ReconFlow AI - Frontend Web App (Next.js 14 + React Flow)
   # -------------------------------------------------------------
   - type: web
-    name: reconflow-ai
+    name: reconflowai-app
     runtime: node
+
     rootDir: frontend
     plan: free
     buildCommand: npm install && npm run build
