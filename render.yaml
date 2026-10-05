@@ -36,6 +36,7 @@ services:
       - key: NODE_VERSION
         value: 20.16.0
       - key: NEXT_PUBLIC_API_URL
-        sync: false
+        value: https://reconflow-api-bmxl.onrender.com
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
         sync: false
