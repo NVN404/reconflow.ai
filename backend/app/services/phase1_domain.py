@@ -1,6 +1,6 @@
 import re
 import datetime
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from typing import List, Dict, Any, Tuple, Optional
 import requests
 
@@ -242,94 +242,106 @@ class Phase1DomainScanner:
                 return
             title = res.get("title", "")
             snip = res.get("snippet", "")
-            combined = f"{link} {title} {snip}".lower()
             host = urlparse(link).netloc.lower()
 
             if any(f.get("url") == link for f in findings):
                 return
 
-            # 1. SQL Injection in search results
-            if any(k in combined for k in ["union select", "union%20select", "select @@", "select%20@@", "sql injection", "vulnerable to sql", "substring(("]):
+            parsed_url = urlparse(link)
+            query_str = unquote(parsed_url.query.lower())
+            path_str = unquote(parsed_url.path.lower())
+
+            # 1. SQL Injection payload in actual URL parameters
+            # Strictly inspect query parameters — do NOT trigger on educational articles, news, or blog snippets!
+            sql_indicators = ["union select", "union%20select", "select @@", "select%20@@", "substring((", "waitfor delay", "' or '", "admin'--"]
+            if any(k in query_str for k in sql_indicators):
                 playbook = get_remediation_for_category("DATABASE_LEAK")
                 findings.append({
-                    "title": "SQL Injection & Database Exposure in Search Engine Index",
+                    "title": "Search-Indexed Potentially Manipulable SQL Query Parameter",
                     "category": "DATABASE_LEAK",
-                    "severity": "CRITICAL",
+                    "severity": "MEDIUM",
+                    "section": "VULNERABILITY",
                     "host": host,
                     "url": link,
-                    "snippet": snip or "Active SQL injection query and response indexed by search engine.",
+                    "snippet": snip or f"Search engine indexed parameter containing SQL query syntax at {link}.",
                     "dork": dork_str,
-                    "surface": "Search Engine Vulnerability Cache",
+                    "surface": "Search Engine Index Cache",
                     "engine": eng,
-                    "what_is_the_bug": f"Search engine indexed an active SQL injection query parameter and database response at {link}.",
-                    "why_it_is_a_bug": playbook.get("why_it_is_a_bug"),
-                    "attack_vector": playbook.get("attack_vector"),
-                    "how_to_fix": playbook.get("how_to_fix"),
-                    "remediation": playbook.get("default_directive"),
+                    "what_is_the_bug": f"Search engine indexed a URL with SQL query syntax in the query parameter at {link}.",
+                    "why_it_is_a_bug": "Indexed query strings containing database syntax can reveal unparameterized endpoints.",
+                    "attack_vector": "Adversaries discover search-indexed query strings to probe for input sanitization weaknesses.",
+                    "how_to_fix": "Enforce parameterized database queries (prepared statements) and sanitize input arguments.",
+                    "remediation": "Audit the endpoint parameter and ensure all database queries use prepared statements.",
                     "owasp_tag": "OWASP A03:2021 — Injection",
                     "cwe_id": "CWE-89: SQL Injection",
-                    "cvss_score": "9.4 (Critical)",
-                    "remediation_steps": playbook.get("remediation_steps", [])
+                    "cvss_score": "6.5 (Medium)",
+                    "remediation_steps": [
+                        "1. Verify that the query parameter uses parameterized queries or ORM abstractions.",
+                        "2. Ensure Web Application Firewall (WAF) filters SQL syntax tokens in GET requests."
+                    ]
                 })
 
-            # 2. Cross-Site Scripting (XSS)
-            elif any(k in combined for k in ["cross-site scripting", "cross site scripting", "<some_dangerous_input", "tfsearch=", "xss"]):
+            # 2. Reflected Cross-Site Scripting (XSS) parameter in URL query string
+            elif any(k in query_str for k in ["<script", "alert(", "javascript:", "<svg", "<img src=x"]):
                 playbook = get_remediation_for_category("API_EXPOSURE")
                 findings.append({
-                    "title": "Reflected Cross-Site Scripting (XSS) Parameter Exposure",
+                    "title": "Search-Indexed Reflected Script Parameter",
                     "category": "API_EXPOSURE",
-                    "severity": "HIGH",
+                    "severity": "MEDIUM",
+                    "section": "VULNERABILITY",
                     "host": host,
                     "url": link,
-                    "snippet": snip or "Reflected input parameter detected in search index.",
+                    "snippet": snip or "Script syntax detected in indexed URL parameter.",
                     "dork": dork_str,
-                    "surface": "Search Engine Vulnerability Cache",
+                    "surface": "Search Engine Index Cache",
                     "engine": eng,
-                    "what_is_the_bug": f"Search engine cached an endpoint reflecting unvalidated script inputs at {link}.",
+                    "what_is_the_bug": f"Search engine cached an endpoint reflecting script tags in query parameters at {link}.",
                     "why_it_is_a_bug": "Unsanitized user input reflected in HTTP responses allows arbitrary script execution in client browsers.",
                     "attack_vector": "Adversaries craft malicious links containing script payloads targeting authenticated victim sessions.",
                     "how_to_fix": "Enforce context-aware HTML entity encoding and configure strict Content Security Policy (CSP).",
                     "remediation": "Deploy Content Security Policy (CSP) headers and encode dynamic query string outputs.",
                     "owasp_tag": "OWASP A03:2021 — Injection / XSS",
                     "cwe_id": "CWE-79: Cross-site Scripting",
-                    "cvss_score": "7.8 (High)",
+                    "cvss_score": "6.1 (Medium)",
                     "remediation_steps": [
                         "1. Implement contextual HTML entity encoding on all user-supplied URL parameters.",
                         "2. Configure strict Content-Security-Policy (CSP) headers prohibiting inline script execution."
                     ]
                 })
 
-            # 3. Directory Traversal / File Disclosure
-            elif any(k in combined for k in ["directory traversal", "path traversal", "file traversal"]):
+            # 3. Directory Traversal / File Disclosure in path or query
+            elif any(k in query_str or k in path_str for k in ["../", "..%2f", "/etc/passwd", "win.ini"]):
                 playbook = get_remediation_for_category("STORAGE_EXPOSURE")
                 findings.append({
-                    "title": "Directory Traversal & Arbitrary File Disclosure",
+                    "title": "Directory Traversal Parameter Syntax Detected",
                     "category": "STORAGE_EXPOSURE",
-                    "severity": "HIGH",
+                    "severity": "MEDIUM",
+                    "section": "VULNERABILITY",
                     "host": host,
                     "url": link,
-                    "snippet": snip or "Directory traversal vulnerability disclosed in search index.",
+                    "snippet": snip or "Directory traversal parameter syntax detected in search index.",
                     "dork": dork_str,
-                    "surface": "Search Engine Vulnerability Cache",
+                    "surface": "Search Engine Index Cache",
                     "engine": eng,
-                    "what_is_the_bug": f"Indexed path indicators show potential local file inclusion/traversal at {link}.",
-                    "why_it_is_a_bug": "Improper file path sanitization allows adversaries to retrieve arbitrary files from the filesystem.",
-                    "attack_vector": "Adversary manipulates file path parameters to read server configuration files.",
+                    "what_is_the_bug": f"Indexed path indicators show potential local file inclusion or traversal syntax at {link}.",
+                    "why_it_is_a_bug": "Improper file path sanitization allows adversaries to retrieve unauthorized files from the filesystem.",
+                    "attack_vector": "Adversary manipulates path parameters to read server configuration files.",
                     "how_to_fix": "Validate and whitelist filenames; avoid using raw user inputs in file access APIs.",
                     "remediation": "Restrict filesystem operations to a chrooted directory and sanitize all path inputs.",
                     "owasp_tag": "OWASP A01:2021 — Broken Access Control",
                     "cwe_id": "CWE-22: Path Traversal",
-                    "cvss_score": "8.2 (High)",
+                    "cvss_score": "6.3 (Medium)",
                     "remediation_steps": playbook.get("remediation_steps", [])
                 })
 
             # 4. Interactive API Documentation / Swagger
-            elif any(k in combined for k in ["vulnerable rest api", "rest api documentation", "swagger", "openapi"]) and not any(x in link.lower() for x in ["/blog", "/careers", "/news"]):
+            elif any(k in link.lower() or k in title.lower() for k in ["swagger", "openapi", "api-docs"]) and not any(x in link.lower() for x in ["/blog", "/careers", "/news"]):
                 playbook = get_remediation_for_category("API_DOCS")
                 findings.append({
                     "title": "Interactive REST API Documentation Console Exposed",
                     "category": "API_DOCS",
-                    "severity": "MEDIUM",
+                    "severity": "LOW",
+                    "section": "INFO",
                     "host": host,
                     "url": link,
                     "snippet": snip or "Publicly accessible REST API documentation.",
@@ -343,7 +355,7 @@ class Phase1DomainScanner:
                     "remediation": playbook.get("default_directive"),
                     "owasp_tag": playbook.get("owasp_tag"),
                     "cwe_id": playbook.get("cwe_id"),
-                    "cvss_score": playbook.get("cvss_score"),
+                    "cvss_score": "3.5 (Low)",
                     "remediation_steps": playbook.get("remediation_steps", [])
                 })
 
