@@ -51,41 +51,45 @@ ReconFlow AI incorporates the tools officially recommended by SerpApi Developer 
 
 ```mermaid
 graph TD
-    User([User Target Domain: reconflow.ai]) --> SearchBar[SearchBar Input & Mode Controls]
-    SearchBar -->|POST /api/scan| FastAPI[FastAPI Backend Engine]
+    User([User Target Domain: e.g. reconflow.ai]) --> CorporateGate[Step 0: Corporate Work Email Gate\nZero-Trust Domain Ownership @target.com]
+    CorporateGate --> SearchBar[SearchBar Input & Attack-Vector Controls]
+    SearchBar -->|POST /api/scan| FastAPI[FastAPI Backend Engine: port 8001]
     
-    subgraph Baseline_Telemetry [Step 1: Light-Touch RFC Perimeter Telemetry]
-        FastAPI --> DNSSweep[DNS Records, MX, CAA, SPF / DMARC Audit]
-        FastAPI --> HeaderProbe[Public HTTP RFC Headers: CSP, HSTS, X-Frame]
+    subgraph Phase1_Domain [Step 1: Phase 1 Domain Recon - SerpApi Passive Sweeps]
+        FastAPI --> Scanner[Phase1DomainScanner]
+        Scanner -->|Pass 1.1: site:*.target -www.target| GoogleSub[Google Subdomain Harvest]
+        Scanner -->|Pass 1.1b: site:target -www.target| BingSub[Bing Multi-Engine Expansion]
+        Scanner -->|Pass 1.1c: site:*.target -www.target| DDGSub[DuckDuckGo Cross-Validation]
+        Scanner -->|Pass 1.2: inurl:admin OR inurl:docs OR inurl:api| AuthProbe[Admin & API Endpoint Discovery]
+        Scanner -->|Pass 1.3: filetype:env OR filetype:sql OR intitle:index of| ConfigLeak[Config & Secret Exposure Sweep]
+        Scanner -->|Pass 1.4: AIzaSy OR sk_live OR AKIA| TokenProbe[Hardcoded API Token Exposure]
+        Scanner -->|Pass 1.5: filetype:pdf OR xlsx CONFIDENTIAL| DocLeak[Confidential Corporate Documents]
     end
 
-    subgraph SerpApi_Engine [Step 2: Autonomous Multi-Engine Dorking - The Hero Engine]
-        DNSSweep & HeaderProbe --> Scanner[Phase1DomainScanner]
-        Scanner -->|Pass 1.1: site:*.target.com| GoogleSerp[SerpApi Google Engine]
-        Scanner -->|Pass 1.1b: site:target.com| BingSerp[SerpApi Bing Engine]
-        Scanner -->|Pass 1.2: inurl:admin OR inurl:docs| AuthProbe[Auth & API Docs Probe]
-        Scanner -->|Pass 1.3: filetype:env OR filetype:sql| ConfigLeak[Config & Secret Audit]
-        Scanner -->|Pass 2.1: site:github.com| GitHubLeaks[GitHub Leak Detection]
-        Scanner -->|Pass 2.2: site:s3.amazonaws.com| S3Scan[S3 Bucket Audit]
-        Scanner -->|Pass 2.3: google_news| ThreatIntel[Google News Threat Radar]
-        Scanner -->|Pass 2.4: engine:youtube| YouTubeRadar[YouTube Exploit PoC Radar]
-        Scanner -->|Pass 2.5: engine:google_play| PlayStoreAudit[Google Play App Perimeter]
-        Scanner -->|Pass 2.6: engine:duckduckgo| DDGValidation[DuckDuckGo Cross-Validation]
+    subgraph Phase2_External [Step 2: Phase 2 External Threat Radar - Modular OSINT]
+        Scanner --> P2Scanner[Phase2ExternalScanner]
+        P2Scanner -->|site:github.com target.com| GitHubLeaks[GitHub Leaks & Repositories]
+        P2Scanner -->|site:s3.amazonaws.com target.com| S3Scan[Exposed S3 & Azure Storage]
+        P2Scanner -->|engine: google_news| NewsRadar[Google News Threat & Breach Radar]
+        P2Scanner -->|engine: youtube| YouTubeRadar[YouTube Exploit PoC Radar]
+        P2Scanner -->|engine: google_play| PlayStoreAudit[Google Play Rogue/Debug APKs]
     end
 
-    subgraph Triage_Synthesis [Step 3: Graph Triage & AI CISO Briefing]
-        GoogleSerp & BingSerp & DDGValidation & AuthProbe & ConfigLeak & GitHubLeaks & S3Scan & ThreatIntel & YouTubeRadar & PlayStoreAudit --> Triage[triage.py Layout & Scoring Engine]
-        Triage --> ExecutiveAI[Gemini Flash CISO Executive Briefing]
+    subgraph Triage_Synthesis [Step 3: AI Triage & Dual-Zone Topology Engine]
+        GoogleSub & BingSub & DDGSub & AuthProbe & ConfigLeak & TokenProbe & DocLeak & GitHubLeaks & S3Scan & NewsRadar & YouTubeRadar & PlayStoreAudit --> TriageLayer[triage.py: ai_triage_findings]
+        TriageLayer -->|Gemini Flash| NoisePurge[AI False-Positive & Noise Elimination]
+        NoisePurge --> DualZoneLayout[layout_graph: Dual-Zone Graph Assembly]
+        DualZoneLayout --> ExecutiveAI[Gemini Flash CISO Executive Briefing]
     end
     
-    ExecutiveAI -->|ScanResult JSON| Frontend[Next.js 14 App Router]
+    ExecutiveAI -->|ScanResult JSON| Frontend[Next.js 14 App Router: port 3000]
     
-    subgraph Frontend_Presentation [Step 4: Interactive React Flow Canvas]
-        Frontend --> LayoutEngine[Dagre Layout Engine: TB / LR]
+    subgraph Frontend_Presentation [Step 4: Interactive Graph Workspace & Playbooks]
+        Frontend --> LayoutEngine[Dagre Layout Engine: TB / LR Hierarchy]
         LayoutEngine --> GraphCanvas[React Flow Graph Canvas]
-        GraphCanvas --> Zone1[ZONE 1: Assets & Threat Intel]
-        GraphCanvas --> Zone2[ZONE 2: Vulnerability Perimeter]
-        GraphCanvas --> Drawer[Slide-Out OWASP/CWE Remediation Playbook Drawer]
+        GraphCanvas --> Zone1[ZONE 1: Perimeter Assets & Threat Intel]
+        GraphCanvas --> Zone2[ZONE 2: Active Vulnerability Perimeter]
+        GraphCanvas --> Drawer[Slide-Out Finding Drawer: CVSS, OWASP, CWE & Fix]
         Frontend --> DossierExport[1-Click CISO Markdown Dossier Export]
     end
 ```

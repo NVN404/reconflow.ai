@@ -60,12 +60,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onExportDossier, onStartReconCli
           >
             The Problem
           </button>
-          <button
-            onClick={() => scrollToSection("graph-section")}
-            className="hover:text-zinc-100 transition-colors cursor-pointer"
+          <a
+            href="/recon"
+            className="text-[#B7E36A] hover:text-white transition-colors cursor-pointer font-mono font-bold flex items-center gap-1"
           >
-            Attack Surface Graph
-          </button>
+            <span>Live Recon Graph →</span>
+          </a>
           <button
             onClick={() => scrollToSection("how-it-works")}
             className="hover:text-zinc-100 transition-colors cursor-pointer"

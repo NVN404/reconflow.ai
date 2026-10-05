@@ -82,7 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
               type="text"
               value={inputDomain}
               onChange={(e) => setInputDomain(e.target.value)}
-              placeholder="Enter domain (e.g. reconflow.ai, stripe.com)"
+              placeholder="Enter domain (e.g. reconflow.render.com, reconflow.ai)"
               disabled={isScanning}
               className="w-full pl-11 pr-36 py-3.5 rounded-lg bg-[#111111]/90 border border-zinc-800 focus:border-[#B7E36A]/80 focus:ring-1 focus:ring-[#B7E36A]/50 text-sm font-mono text-zinc-100 placeholder:text-zinc-600 outline-none transition-all shadow-lg backdrop-blur-md"
             />
@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
           className="flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-500 font-mono"
         >
           <span>Try target:</span>
-          {["reconflow.ai", "stripe.com", "linear.app", "github.com"].map((target) => (
+          {["reconflow.render.com", "reconflow.ai"].map((target) => (
             <button
               key={target}
               onClick={() => handleChipClick(target)}

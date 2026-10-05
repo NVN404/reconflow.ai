@@ -1,5 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import os
+import stripe
+from pydantic import BaseModel
+from typing import Optional
+
 from app.schemas import ScanRequest, ScanResult
 from app.services.phase1_domain import Phase1DomainScanner
 from app.cache import get_cached_scan
@@ -21,6 +26,50 @@ app.add_middleware(
 )
 
 scanner = Phase1DomainScanner()
+
+class CheckoutSessionRequest(BaseModel):
+    plan: Optional[str] = "Professional Plan"
+    amount: Optional[int] = 4900 # in cents ($49)
+    success_url: Optional[str] = None
+    cancel_url: Optional[str] = None
+
+@app.post("/api/create-checkout-session")
+def create_checkout_session(req: CheckoutSessionRequest):
+    stripe_key = os.getenv("STRIPE_SECRET_KEY", "").strip()
+    if not stripe_key:
+        raise HTTPException(status_code=500, detail="STRIPE_SECRET_KEY is not configured on server.")
+
+    stripe.api_key = stripe_key
+
+    # Standard default URLs
+    success_url = req.success_url or "http://localhost:3000/recon?session_id={CHECKOUT_SESSION_ID}&upgraded=true"
+    cancel_url = req.cancel_url or "http://localhost:3000/recon?canceled=true"
+
+    try:
+        session = stripe.checkout.Session.create(
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": f"ReconFlow AI — {req.plan}",
+                        "description": "Continuous Attack Surface Monitoring, 6-Engine SerpApi Recon & Unlimited Sweeps",
+                    },
+                    "unit_amount": req.amount or 4900,
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return {
+            "checkout_url": session.url,
+            "session_id": session.id,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
 
 @app.get("/health")
 @app.get("/api/health")

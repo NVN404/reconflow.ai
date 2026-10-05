@@ -4,7 +4,12 @@ import React, { useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-export const PricingSection: React.FC = () => {
+interface PricingSectionProps {
+  onUpgradeClick?: (planName: string, price: string) => void;
+  isProMember?: boolean;
+}
+
+export const PricingSection: React.FC<PricingSectionProps> = ({ onUpgradeClick, isProMember }) => {
   const [isAnnual, setIsAnnual] = useState(false);
 
   const plans = [
@@ -156,13 +161,29 @@ export const PricingSection: React.FC = () => {
 
               <div className="mt-8 pt-6 border-t border-border">
                 <button
+                  onClick={() => {
+                    if (plan.name === "Professional") {
+                      onUpgradeClick?.(plan.name, isAnnual ? plan.priceAnnual : plan.priceMonthly);
+                    } else if (plan.name === "Community") {
+                      const el = document.getElementById("graph-section");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    } else {
+                      alert("Contact enterprise sales at security@reconflow.ai");
+                    }
+                  }}
                   className={`w-full py-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
                     plan.highlighted
-                      ? "bg-lime hover:bg-lime-hover text-background"
+                      ? isProMember
+                        ? "bg-emerald-500 text-black cursor-default"
+                        : "bg-lime hover:bg-lime-hover text-background"
                       : "bg-surface-elevated hover:bg-surface-hover text-foreground border border-border"
                   }`}
                 >
-                  <span>{plan.cta}</span>
+                  <span>
+                    {plan.name === "Professional" && isProMember
+                      ? "Active Subscription ✓"
+                      : plan.cta}
+                  </span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

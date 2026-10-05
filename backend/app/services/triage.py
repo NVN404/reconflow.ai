@@ -63,8 +63,8 @@ def ai_triage_findings(
         )
 
         models_to_try = [
-            "gemini-3.8-flash",
-            "gemini-flash-latest"
+            "gemini-flash-latest",
+            "gemini-3.8-flash"
         ]
 
         for model_name in models_to_try:
@@ -209,7 +209,7 @@ def build_executive_summary(target: str, total: int, critical: int, high: int, m
             f"Medium Risks: {medium}, Security Score: {score}/100, Grade: {grade}. "
             f"Tone: Professional, authoritative, actionable."
         )
-        models_to_try = ["gemini-3.8-flash", "gemini-flash-latest"]
+        models_to_try = ["gemini-flash-latest", "gemini-3.8-flash"]
         for m in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_key}"
             try:
