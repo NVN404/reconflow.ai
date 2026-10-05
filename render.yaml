@@ -26,7 +26,7 @@ services:
   # ReconFlow AI - Frontend Web App (Next.js 14 + React Flow)
   # -------------------------------------------------------------
   - type: web
-    name: reconflow-frontend
+    name: reconflow-ai
     runtime: node
     rootDir: frontend
     plan: free
@@ -38,5 +38,5 @@ services:
       - key: NEXT_PUBLIC_API_URL
         value: https://reconflow-api-bmxl.onrender.com
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
         sync: false
+
