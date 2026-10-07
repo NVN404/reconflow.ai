@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/lib/ThemeContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,9 +27,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#050505] text-[#F7F7F5] antialiased selection:bg-[#B7E36A]/20 selection:text-[#B7E36A] font-sans">
-        {children}
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`dark ${inter.variable} ${jetbrainsMono.variable}`}
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("reconflow_theme")||"dark";if(t==="dark"){document.documentElement.classList.add("dark")}else{document.documentElement.classList.remove("dark")}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="antialiased selection:bg-[#B7E36A]/20 selection:text-[#B7E36A] font-sans transition-colors duration-200">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

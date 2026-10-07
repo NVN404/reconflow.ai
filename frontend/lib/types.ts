@@ -76,6 +76,7 @@ export interface ScanSummary {
   security_grade: string;
   serpapi_credits_used: number;
   generated_at: string;
+  protocol_used?: "rest" | "mcp" | string;
 }
 
 export interface AgentThought {
@@ -99,5 +100,6 @@ export interface ScanRequest {
   use_cache?: boolean;
   custom_dorks?: string[];
   enabled_vectors?: Record<string, boolean>;
+  protocol?: "rest" | "mcp";
 }
 

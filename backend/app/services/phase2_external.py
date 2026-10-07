@@ -59,12 +59,38 @@ class Phase2ExternalScanner:
             status="info"
         ))
 
+        # Audit enabled vs bypassed vectors per user Dork Matrix policy
+        vector_catalog = [
+            ("github", "GitHub Secret & Credential Leaks", run_github),
+            ("cloud", "Multi-Cloud Bucket Hunter (S3/Azure/GCS/Spaces)", run_cloud),
+            ("footprint", "Third-Party Directory & Web Footprint", run_footprint),
+            ("news", "Threat Intelligence News", run_news),
+            ("youtube", "YouTube Exploit PoC Radar", run_youtube),
+            ("play", "Google Play Store Mobile Perimeter", run_play),
+        ]
+        active_names = [name for _, name, enabled in vector_catalog if enabled]
+        bypassed_names = [name for _, name, enabled in vector_catalog if not enabled]
+
+        thoughts.append(AgentThought(
+            timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+            stage="DORK_CONFIG",
+            message=f"Dork Matrix Active: {len(active_names)}/6 signatures armed. {len(bypassed_names)} signatures unselected and strictly bypassed.",
+            status="info"
+        ))
+
         # --- 1. GITHUB SECRET & CREDENTIAL LEAK AUDIT ---
         if run_github:
             gh_findings, gh_thoughts, gh_credits = self._audit_github_leaks(clean_target, brand_name)
             external_findings.extend(gh_findings)
             thoughts.extend(gh_thoughts)
             credits_used += gh_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing GitHub Secret & Credential Leaks per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 2. MULTI-CLOUD STORAGE BUCKET HUNTER (AWS S3 + Azure + GCS + DO Spaces) ---
         if run_cloud:
@@ -72,6 +98,13 @@ class Phase2ExternalScanner:
             external_findings.extend(cloud_findings)
             thoughts.extend(cloud_thoughts)
             credits_used += cloud_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing Multi-Cloud Bucket Hunter per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 3. THIRD-PARTY DIRECTORY & WEB FOOTPRINT ---
         if run_footprint:
@@ -79,6 +112,13 @@ class Phase2ExternalScanner:
             external_findings.extend(fp_findings)
             thoughts.extend(fp_thoughts)
             credits_used += fp_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing Third-Party Directory & Footprint per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 4. THREAT INTELLIGENCE & INCIDENT NEWS (google_news) ---
         if run_news:
@@ -86,6 +126,13 @@ class Phase2ExternalScanner:
             external_findings.extend(news_findings)
             thoughts.extend(news_thoughts)
             credits_used += news_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing Threat Intelligence News per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 5. YOUTUBE EXPLOIT POC & BUG BOUNTY RADAR (youtube) ---
         if run_youtube:
@@ -93,6 +140,13 @@ class Phase2ExternalScanner:
             external_findings.extend(yt_findings)
             thoughts.extend(yt_thoughts)
             credits_used += yt_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing YouTube Exploit PoC Radar per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 6. GOOGLE PLAY STORE MOBILE PERIMETER (google_play) ---
         if run_play:
@@ -100,6 +154,13 @@ class Phase2ExternalScanner:
             external_findings.extend(play_findings)
             thoughts.extend(play_thoughts)
             credits_used += play_credits
+        else:
+            thoughts.append(AgentThought(
+                timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
+                stage="VECTOR_BYPASS",
+                message="[DORK MATRIX] Bypassing Google Play Store Mobile Perimeter per user configuration (0 SerpApi queries, 0 credits spent)",
+                status="info"
+            ))
 
         # --- 7. USER CUSTOM DORK SIGNATURES (Ungated Hunting) ---
         if custom_dorks and len(custom_dorks) > 0:
@@ -108,10 +169,14 @@ class Phase2ExternalScanner:
             thoughts.extend(custom_thoughts)
             credits_used += custom_credits
 
+        completed_msg = (
+            f"Phase 2 Complete: Dispatched {len(active_names)} active vectors ({len(external_findings)} external threat assets, "
+            f"{credits_used} SerpApi credits). {len(bypassed_names)} unselected signatures strictly omitted."
+        )
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="PHASE_2_COMPLETE",
-            message=f"Phase 2 Complete: Mapped external multi-cloud storage, GitHub leaks, YouTube exploit radar, and mobile perimeter.",
+            message=completed_msg,
             status="success"
         ))
 

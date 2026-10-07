@@ -11,6 +11,7 @@ from app.schemas import ScanResult, ScanSummary, AgentThought
 from app.services.triage import compute_security_score, build_executive_summary, layout_graph, ai_triage_findings
 from app.remediation import get_remediation_for_category
 from app.services.phase2_external import Phase2ExternalScanner
+from app.services.serpapi_mcp_client import SerpApiMCPClient
 
 
 def is_valid_config_leak(link: str, title: str, snippet: str) -> Tuple[bool, str]:
@@ -111,12 +112,25 @@ def is_valid_auth_gateway(link: str) -> Tuple[bool, str]:
 class Phase1DomainScanner:
     def __init__(self, api_key: str = ""):
         self._api_key = api_key
+        self.mcp_client = SerpApiMCPClient(api_key=api_key)
+        self._active_protocol = "rest"
 
     @property
     def api_key(self) -> str:
         return self._api_key or get_serpapi_key()
 
-    def execute_serpapi_query(self, query: str, engine: str = "google") -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    def execute_serpapi_query(self, query: str, engine: str = "google", protocol: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        active_proto = protocol or getattr(self, "_active_protocol", "rest")
+        
+        # 1. Official SerpApi Model Context Protocol (MCP) Execution
+        if active_proto == "mcp":
+            mcp_results, mcp_err = self.mcp_client.search(query, engine=engine)
+            if not mcp_err and mcp_results is not None:
+                return mcp_results, None
+            # Graceful degradation / fallback to direct REST if MCP encounters a network hiccup
+            print(f"[WARN] MCP search fallback to Direct REST for '{query}': {mcp_err}")
+
+        # 2. Direct SerpApi REST API Execution (Default / Resilient Fallback)
         key = self.api_key
         if not key:
             return [], "No API key configured"
@@ -163,12 +177,14 @@ class Phase1DomainScanner:
         use_cache: bool = True,
         enable_phase2: bool = False,
         custom_dorks: Optional[List[str]] = None,
-        enabled_vectors: Optional[Dict[str, bool]] = None
+        enabled_vectors: Optional[Dict[str, bool]] = None,
+        protocol: str = "rest"
     ) -> ScanResult:
         clean_target = target.strip().lower()
         clean_target = re.sub(r"^https?://", "", clean_target).rstrip("/")
         brand_name = clean_target.split(".")[0]
         
+        self._active_protocol = protocol
         thoughts: List[AgentThought] = []
         now = datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -179,6 +195,21 @@ class Phase1DomainScanner:
             status="info"
         ))
 
+        if protocol == "mcp":
+            thoughts.append(AgentThought(
+                timestamp=now,
+                stage="MCP_ACTIVE",
+                message="Protocol: Official SerpApi MCP Server (Model Context Protocol 2026 via mcp.serpapi.com) — Compact stream active (-60% LLM token overhead)",
+                status="success"
+            ))
+        else:
+            thoughts.append(AgentThought(
+                timestamp=now,
+                stage="REST_ACTIVE",
+                message="Protocol: Direct SerpApi REST Engine (Raw SERP Multi-Engine Intelligence) — Full uncompressed JSON telemetry (DOM metadata & rich snippets)",
+                status="info"
+            ))
+
         # Only fallback to offline simulation if no SERPAPI_KEY is configured or explicit mock requested
         if not self.api_key or clean_target in ["mock.local", "offline.test"]:
             thoughts.append(AgentThought(
@@ -187,7 +218,13 @@ class Phase1DomainScanner:
                 message=f"No SERPAPI_KEY configured or offline mode requested. Generating simulated scan for '{clean_target}'.",
                 status="warning"
             ))
-            return self._generate_simulated_scan(clean_target, thoughts)
+            return self._generate_simulated_scan(
+                clean_target,
+                thoughts,
+                protocol=protocol,
+                enable_phase2=enable_phase2,
+                enabled_vectors=enabled_vectors
+            )
 
 
         # LIVE MULTI-PASS SERPAPI RECONNAISSANCE
@@ -745,7 +782,8 @@ class Phase1DomainScanner:
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=credits_used,
-            generated_at=datetime.datetime.now(datetime.timezone.utc).isoformat()
+            generated_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            protocol_used=protocol
         )
 
         result = ScanResult(
@@ -759,7 +797,14 @@ class Phase1DomainScanner:
         return result
 
 
-    def _generate_simulated_scan(self, target: str, thoughts: List[AgentThought]) -> ScanResult:
+    def _generate_simulated_scan(
+        self,
+        target: str,
+        thoughts: List[AgentThought],
+        protocol: str = "rest",
+        enable_phase2: bool = True,
+        enabled_vectors: Optional[Dict[str, bool]] = None
+    ) -> ScanResult:
         """Deterministic simulation for offline testing and 0-credit development."""
         subdomains = [
             {
@@ -821,33 +866,72 @@ class Phase1DomainScanner:
             }
         ]
 
-        external_findings = [
-            {
-                "title": f"Research PoC Video: Auth Flow Analysis on {target.title()}",
-                "category": "YOUTUBE_POC",
-                "severity": "INFO",
-                "url": "https://www.youtube.com/watch?v=sample_poc_demo",
-                "snippet": f"Channel: CyberSecurityLab | Views: 14.2K | 2026. Live proof of concept demonstrating OAuth flow anomaly on {target}.",
-                "dork": f"engine:youtube search_query='{target} vulnerability'",
-                "surface": "YouTube Exploit Radar",
-                "engine": "youtube"
-            },
-            {
-                "title": f"Mobile Client: {target.title()} Workspace",
-                "category": "MOBILE_APP",
-                "severity": "INFO",
-                "url": f"https://play.google.com/store/apps/details?id=com.{target.split('.')[0]}.app",
-                "snippet": f"Package: com.{target.split('.')[0]}.app | Rating: 4.8★ | Developer: {target.title()} Official",
-                "dork": f"engine:google_play q={target.split('.')[0]}",
-                "surface": "Google Play Store",
-                "engine": "google_play"
-            }
-        ]
+        external_findings = []
+        vectors = enabled_vectors or {}
+
+        if enable_phase2:
+            now_str = datetime.datetime.now().strftime("%H:%M:%S")
+            if vectors.get("youtube", True):
+                external_findings.append({
+                    "title": f"Research PoC Video: Auth Flow Analysis on {target.title()}",
+                    "category": "YOUTUBE_POC",
+                    "severity": "INFO",
+                    "url": "https://www.youtube.com/watch?v=sample_poc_demo",
+                    "snippet": f"Channel: CyberSecurityLab | Views: 14.2K | 2026. Live proof of concept demonstrating OAuth flow anomaly on {target}.",
+                    "dork": f"engine:youtube search_query='{target} vulnerability'",
+                    "surface": "YouTube Exploit Radar",
+                    "engine": "youtube"
+                })
+            else:
+                thoughts.append(AgentThought(
+                    timestamp=now_str,
+                    stage="VECTOR_BYPASS",
+                    message="[DORK MATRIX] Bypassing YouTube Exploit PoC Radar per user configuration (0 queries, 0 credits)",
+                    status="info"
+                ))
+
+            if vectors.get("play", True):
+                external_findings.append({
+                    "title": f"Mobile Client: {target.title()} Workspace",
+                    "category": "MOBILE_APP",
+                    "severity": "INFO",
+                    "url": f"https://play.google.com/store/apps/details?id=com.{target.split('.')[0]}.app",
+                    "snippet": f"Package: com.{target.split('.')[0]}.app | Rating: 4.8★ | Developer: {target.title()} Official",
+                    "dork": f"engine:google_play q={target.split('.')[0]}",
+                    "surface": "Google Play Store",
+                    "engine": "google_play"
+                })
+            else:
+                thoughts.append(AgentThought(
+                    timestamp=now_str,
+                    stage="VECTOR_BYPASS",
+                    message="[DORK MATRIX] Bypassing Google Play Store Mobile Perimeter per user configuration (0 queries, 0 credits)",
+                    status="info"
+                ))
+
+            if vectors.get("cloud", True):
+                external_findings.append({
+                    "title": f"Public Cloud Storage Bucket: {target.split('.')[0]}-assets",
+                    "category": "CLOUD_STORAGE",
+                    "severity": "MEDIUM",
+                    "url": f"https://{target.split('.')[0]}-assets.s3.amazonaws.com",
+                    "snippet": "Publicly readable Amazon S3 bucket indexing staging build assets and backups.",
+                    "dork": f"site:s3.amazonaws.com \"{target.split('.')[0]}\"",
+                    "surface": "Multi-Cloud Storage",
+                    "engine": "google"
+                })
+            else:
+                thoughts.append(AgentThought(
+                    timestamp=now_str,
+                    stage="VECTOR_BYPASS",
+                    message="[DORK MATRIX] Bypassing Multi-Cloud Storage Bucket Hunter per user configuration (0 queries, 0 credits)",
+                    status="info"
+                ))
 
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="SYNTHESIS",
-            message=f"Constructed multi-engine attack surface graph for {target} with 3 subdomains, 3 findings, and 2 threat intel assets.",
+            message=f"Constructed multi-engine attack surface graph for {target} with {len(subdomains)} subdomains, {len(findings)} perimeter findings, and {len(external_findings)} external threat assets.",
             status="success"
         ))
 
@@ -883,7 +967,8 @@ class Phase1DomainScanner:
             security_score=score,
             security_grade=grade,
             serpapi_credits_used=0,
-            generated_at=datetime.datetime.now(datetime.timezone.utc).isoformat()
+            generated_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            protocol_used=protocol
         )
 
         return ScanResult(

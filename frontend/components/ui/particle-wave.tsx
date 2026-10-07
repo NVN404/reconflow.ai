@@ -39,6 +39,7 @@ export const ParticleWave: React.FC<ParticleWaveProps> = ({
     let windowHalfY = window.innerHeight / 2;
 
     let animationFrameId: number;
+    let onThemeChange: (() => void) | null = null;
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -79,14 +80,20 @@ export const ParticleWave: React.FC<ParticleWaveProps> = ({
       geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute("scale", new THREE.BufferAttribute(scales, 1));
 
-      // Dark Mode: soft near-white (#D4D4D0) base + bright lime (#B7E36A)
-      const baseColor = new THREE.Color("#D4D4D0");
-      const accentColor = new THREE.Color(particleColor || "#B7E36A");
+      const getThemeColors = () => {
+        const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+        return {
+          base: isDark ? new THREE.Color("#D4D4D0") : new THREE.Color("#64748b"),
+          accent: isDark ? new THREE.Color(particleColor || "#B7E36A") : new THREE.Color(particleColor || "#4d7c0f"),
+          blending: isDark ? THREE.AdditiveBlending : THREE.NormalBlending,
+        };
+      };
 
+      const initialColors = getThemeColors();
       const material = new THREE.ShaderMaterial({
         uniforms: {
-          baseColor: { value: baseColor },
-          accentColor: { value: accentColor },
+          baseColor: { value: initialColors.base },
+          accentColor: { value: initialColors.accent },
         },
         vertexShader: `
           attribute float scale;
@@ -118,8 +125,17 @@ export const ParticleWave: React.FC<ParticleWaveProps> = ({
         `,
         transparent: true,
         depthWrite: false,
-        blending: THREE.AdditiveBlending,
+        blending: initialColors.blending,
       });
+
+      const onThemeChange = () => {
+        const nextColors = getThemeColors();
+        material.uniforms.baseColor.value = nextColors.base;
+        material.uniforms.accentColor.value = nextColors.accent;
+        material.blending = nextColors.blending;
+        material.needsUpdate = true;
+      };
+      window.addEventListener("themechange", onThemeChange);
 
       particles = new THREE.Points(geometry, material);
       scene.add(particles);
@@ -208,6 +224,9 @@ export const ParticleWave: React.FC<ParticleWaveProps> = ({
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("resize", onWindowResize);
+      if (onThemeChange) {
+        window.removeEventListener("themechange", onThemeChange);
+      }
 
       if (particles) {
         particles.geometry.dispose();

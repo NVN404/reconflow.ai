@@ -13,7 +13,7 @@ interface AnimatedTextProps {
 export const AnimatedText: React.FC<AnimatedTextProps> = ({
   text,
   highlightWord = "visible.",
-  highlightClassName = "text-[#B7E36A]",
+  highlightClassName = "text-lime",
   className = "",
 }) => {
   const words = text.split(" ");

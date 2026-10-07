@@ -44,29 +44,27 @@ module.exports = {
           975: "#050505",
         },
 
-        // ─── Semantic surface aliases (dark-mode static) ───────────────
-        // These map component class names to the design system hex values.
-
+        // ─── Semantic surface aliases (Dynamic CSS Variables for Dark/Light Mode) ───────────────
         // Backgrounds
-        background: "#050505",
+        background: "var(--background)",
         surface: {
-          DEFAULT: "#080808",
-          elevated: "#0B0B0B",
-          hover: "#111111",
-          card: "#0B0B0B",
+          DEFAULT: "var(--surface)",
+          elevated: "var(--surface-elevated)",
+          hover: "var(--surface-hover)",
+          card: "var(--surface-card)",
         },
 
         // Text
         foreground: {
-          DEFAULT: "#F7F7F5",
-          secondary: "#A0A09C",
-          muted: "#6F6F6B",
+          DEFAULT: "var(--foreground)",
+          secondary: "var(--foreground-secondary)",
+          muted: "var(--foreground-muted)",
         },
 
         // Borders
         border: {
-          DEFAULT: "#292929",
-          strong: "#383838",
+          DEFAULT: "var(--border)",
+          strong: "var(--border-strong)",
         },
       },
     },

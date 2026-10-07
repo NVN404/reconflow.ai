@@ -32,43 +32,43 @@ const getDrawerBadgeStyles = (
   if (isClean) {
     return {
       label: "Perimeter Secure",
-      class: "bg-emerald-950/80 text-emerald-400 border border-emerald-800/80",
+      class: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
     };
   }
   if (isResource) {
     return {
       label: "OSINT Resource",
-      class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+      class: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
     };
   }
   if (isNews) {
     return {
       label: "Threat Intel Advisory",
-      class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+      class: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
     };
   }
   if (isYoutube) {
     return {
       label: "Researcher PoC",
-      class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+      class: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
     };
   }
   if (isMobile) {
     return {
       label: "Mobile Client Asset",
-      class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+      class: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
     };
   }
   if (isToken) {
     return {
       label: "Critical Token Leak",
-      class: "bg-rose-950 text-rose-300 border border-rose-800",
+      class: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
     };
   }
   if (isDoc) {
     return {
       label: "Confidential Document",
-      class: "bg-[#B7E36A]/10 text-[#B7E36A] border border-[#B7E36A]/30",
+      class: "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
     };
   }
 
@@ -76,27 +76,27 @@ const getDrawerBadgeStyles = (
     case "CRITICAL":
       return {
         label: "Critical Severity",
-        class: "bg-rose-950 text-rose-300 border border-rose-800",
+        class: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
       };
     case "HIGH":
       return {
         label: "High Severity",
-        class: "bg-orange-950 text-orange-300 border border-orange-800",
+        class: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800",
       };
     case "MEDIUM":
       return {
         label: "Medium Severity",
-        class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+        class: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
       };
     case "LOW":
       return {
         label: "Low Severity",
-        class: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+        class: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
       };
     default:
       return {
         label: "Info Severity",
-        class: "bg-zinc-800 text-zinc-400 border border-zinc-700",
+        class: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
       };
   }
 };
@@ -133,10 +133,10 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
     ? "OSINT RESEARCH RESOURCE"
     : "PERIMETER ASSET";
   const sectionStyle = isVulnSection
-    ? "bg-rose-950 text-rose-300 border border-rose-800"
+    ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800"
     : isResource
-    ? "bg-zinc-800 text-zinc-300 border border-zinc-700"
-    : "bg-zinc-800 text-zinc-300 border border-zinc-700";
+    ? "bg-slate-100 text-slate-800 border-slate-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
+    : "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800";
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -198,20 +198,20 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
         {/* 2. Threat Analysis */}
         {data.why_it_is_a_bug && (
           <div
-            className={`p-4 rounded border space-y-3 ${
+            className={`p-4 rounded-lg border space-y-3 ${
               isVulnSection
-                ? "bg-rose-950/30 border-rose-800/80"
+                ? "bg-rose-50/80 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800/80"
                 : isClean
-                ? "bg-emerald-950/30 border-emerald-800/80"
+                ? "bg-emerald-50/80 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/80"
                 : "bg-surface-elevated border-border"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground">
                 {isClean ? (
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-foreground-secondary" />
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 )}
                 <span>
                   {isClean
@@ -220,7 +220,7 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
                 </span>
               </div>
               {data.cvss_score && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-950/30 text-rose-300 border border-rose-800/60">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
                   CVSS {data.cvss_score}
                 </span>
               )}
@@ -246,14 +246,14 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
 
         {/* 3. Standards Badges */}
         {(data.owasp_tag || data.cwe_id) && (
-          <div className="p-3.5 rounded bg-surface-elevated border border-border space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">
+          <div className="p-3.5 rounded-lg bg-surface-elevated border border-border space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">
               <Lock className="w-3 h-3" />
               <span>Security Standard Classification</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {data.owasp_tag && (
-                <span className="text-[11px] font-mono text-lime bg-background border border-border px-2 py-0.5 rounded">
+                <span className="text-[11px] font-mono text-emerald-700 dark:text-lime bg-background border border-border px-2 py-0.5 rounded">
                   {data.owasp_tag}
                 </span>
               )}
@@ -284,10 +284,10 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
             href={data.metadata?.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-2.5 rounded bg-surface-elevated border border-border text-lime hover:text-lime-hover hover:border-border-strong transition group font-mono text-xs break-all"
+            className="flex items-center justify-between p-2.5 rounded-lg bg-surface-elevated border border-border text-emerald-700 dark:text-lime hover:border-border-strong transition group font-mono text-xs break-all"
           >
             <span>{data.metadata?.url}</span>
-            <ExternalLink className="w-4 h-4 ml-2 flex-shrink-0 text-foreground-muted group-hover:text-lime" />
+            <ExternalLink className="w-4 h-4 ml-2 flex-shrink-0 text-foreground-muted group-hover:text-foreground" />
           </a>
         </div>
 
@@ -297,7 +297,7 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
             <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider block mb-1.5">
               Proof Context
             </span>
-            <div className="p-3 rounded bg-surface-elevated border border-border text-foreground-secondary text-xs leading-relaxed font-sans">
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border text-foreground-secondary text-xs leading-relaxed font-sans">
               {data.metadata.snippet}
             </div>
           </div>
@@ -309,7 +309,7 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
             <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider block mb-1.5">
               Exact Dork Operator Executed
             </span>
-            <div className="flex items-center justify-between p-2.5 rounded bg-surface-elevated border border-border text-lime font-mono text-xs">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-elevated border border-border text-emerald-700 dark:text-lime font-mono text-xs">
               <span className="truncate mr-2">{data.metadata.dork_used}</span>
               <button
                 onClick={() => handleCopy(data.metadata.dork_used, "dork")}
@@ -325,7 +325,7 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
         {(data.how_to_fix || data.remediation || data.remediation_steps) && (
           <div className="border-t border-border pt-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-emerald-400 font-mono">
+              <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-mono">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>Defensive Remediation Guide</span>
               </span>
@@ -338,7 +338,7 @@ export const FindingDrawer: React.FC<FindingDrawerProps> = ({ node, onClose }) =
                     "remediation"
                   )
                 }
-                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 transition cursor-pointer"
               >
                 {copiedKey === "remediation" ? (
                   <>

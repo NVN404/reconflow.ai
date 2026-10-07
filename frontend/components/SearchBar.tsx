@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import {
   Search,
   Globe2,
-  Radio,
-  CheckCircle2,
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
@@ -15,6 +13,9 @@ import {
   Smartphone,
   Newspaper,
   Terminal,
+  Zap,
+  Bot,
+  Info,
 } from "lucide-react";
 
 interface SearchBarProps {
@@ -22,7 +23,8 @@ interface SearchBarProps {
     domain: string,
     enablePhase2: boolean,
     customDorks?: string[],
-    enabledVectors?: Record<string, boolean>
+    enabledVectors?: Record<string, boolean>,
+    protocol?: "rest" | "mcp"
   ) => void;
   isScanning: boolean;
 }
@@ -30,7 +32,6 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
   const [domain, setDomain] = useState("vulnweb.com");
   const [enablePhase2, setEnablePhase2] = useState(true);
-
 
   const [showConfig, setShowConfig] = useState(false);
 
@@ -73,15 +74,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
     footprint: vectorFootprint,
   });
 
+  const [protocol, setProtocol] = useState<"rest" | "mcp">("rest");
+  const [showProtocolInfo, setShowProtocolInfo] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain.trim()) return;
-    onScan(domain.trim(), enablePhase2, customDorks, getEnabledVectors());
-  };
-
-  const handleQuickTarget = (targetDomain: string) => {
-    setDomain(targetDomain);
-    onScan(targetDomain, true, customDorks, getEnabledVectors());
+    onScan(domain.trim(), enablePhase2, customDorks, getEnabledVectors(), protocol);
   };
 
   return (
@@ -89,29 +88,77 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-2.5">
         {/* Input Field */}
         <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-            <Globe2 className="w-4 h-4 text-zinc-500" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-foreground-muted">
+            <Globe2 className="w-4 h-4 text-foreground-muted" />
           </div>
           <input
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             placeholder="Enter target domain (e.g. vulnweb.com)"
-            className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0B0B0B] border border-[#292929] text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#B7E36A] transition-all text-xs shadow-inner"
+            className="w-full pl-10 pr-4 py-3 rounded-lg bg-surface border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-lime transition-all text-xs shadow-sm"
             disabled={isScanning}
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          {/* Protocol Engine Switch: REST vs SerpApi MCP */}
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border text-xs shadow-sm">
+            <button
+              type="button"
+              onClick={() => setProtocol("rest")}
+              disabled={isScanning}
+              className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md font-mono text-[11px] font-bold transition-all ${
+                protocol === "rest"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 shadow-sm"
+                  : "text-foreground-muted hover:text-foreground border border-transparent"
+              }`}
+              title="Direct REST: High-throughput raw JSON extraction via standard SerpApi REST endpoints"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <span>Direct REST</span>
+              <span className="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-surface-elevated text-foreground-muted font-normal">
+                Raw JSON
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProtocol("mcp")}
+              disabled={isScanning}
+              className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md font-mono text-[11px] font-bold transition-all ${
+                protocol === "mcp"
+                  ? "bg-purple-500/15 dark:bg-purple-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/50 shadow-sm ring-1 ring-purple-500/30"
+                  : "text-foreground-muted hover:text-foreground border border-transparent"
+              }`}
+              title="SerpApi MCP: Model Context Protocol 2026 stream via mcp.serpapi.com (-60% LLM token overhead)"
+            >
+              <Bot className="w-3.5 h-3.5 text-purple-500" />
+              <span>SerpApi MCP</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-200 border border-purple-500/40 font-bold">
+                -60% Tokens
+              </span>
+            </button>
+
+            {/* Protocol Comparison Info Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowProtocolInfo(!showProtocolInfo)}
+              className="px-1.5 py-1 text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+              title="Why two protocols? Click to learn the difference."
+            >
+              <Info className="w-3.5 h-3.5 text-foreground-muted hover:text-foreground" />
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={isScanning}
-            className="flex-1 sm:flex-none px-5 py-3 rounded-lg bg-zinc-100 hover:bg-white text-[#050505] font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="flex-1 sm:flex-none px-5 py-3 rounded-lg bg-foreground hover:opacity-90 text-background font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isScanning ? (
               <>
-                <span className="w-3.5 h-3.5 border-2 border-[#050505] border-t-transparent rounded-full animate-spin" />
+                <span className="w-3.5 h-3.5 border-2 border-background border-t-transparent rounded-full animate-spin" />
                 <span>Sweeping Engines...</span>
               </>
             ) : (
@@ -122,33 +169,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleQuickTarget("vulnweb.com")}
-            disabled={isScanning}
-            className="px-3.5 py-3 rounded-lg bg-[#0B0B0B] hover:bg-[#111111] border border-[#292929] text-zinc-300 font-medium text-xs transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
-            title="Scan live security testbed vulnweb.com via SerpApi"
-          >
-            <span>Preset: vulnweb.com</span>
-          </button>
-
-
-
           {/* Dork Strategy Config Toggle */}
           <button
             type="button"
             onClick={() => setShowConfig(!showConfig)}
-            className={`px-3.5 py-3 rounded-lg border text-xs font-mono transition-all duration-150 active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-3 rounded-lg border text-xs font-mono transition-all duration-150 active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm ${
               showConfig || customDorks.length > 0
-                ? "bg-purple-950/50 border-purple-500/60 text-purple-300 ring-1 ring-purple-500/30"
-                : "bg-[#0B0B0B] hover:bg-[#111111] border-[#292929] text-zinc-300"
+                ? "bg-purple-500/15 border-purple-500/60 text-purple-700 dark:text-purple-300 ring-1 ring-purple-500/30"
+                : "bg-surface hover:bg-surface-elevated border-border text-foreground"
             }`}
             title="Configure Dork Matrix & Custom Signatures"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-purple-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-purple-500" />
             <span className="hidden sm:inline">Dork Matrix</span>
             {customDorks.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 text-[10px] font-bold text-purple-200">
+              <span className="px-1.5 py-0.2 rounded-full bg-purple-500/20 text-[10px] font-bold text-purple-700 dark:text-purple-200">
                 +{customDorks.length}
               </span>
             )}
@@ -157,170 +192,181 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
         </div>
       </form>
 
-      {/* Mode Controls */}
-      <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-1 gap-2 border-t border-zinc-800/60">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>100% Pure SerpApi Autonomous Recon</span>
-          </div>
-
-          <label className="flex items-center gap-1.5 cursor-pointer select-none text-zinc-400 hover:text-zinc-200">
-            <input
-              type="checkbox"
-              checked={enablePhase2}
-              onChange={(e) => setEnablePhase2(e.target.checked)}
-              className="rounded bg-[#111111] border-[#292929] text-[#B7E36A] focus:ring-[#B7E36A]"
-            />
-            <span className="font-mono text-purple-300">Phase 2: External Threat Radar</span>
-          </label>
-        </div>
-
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-zinc-500">Engines:</span>
-          {(["Google", "Bing", "DuckDuckGo", "YouTube", "Play"] as const).map((engine) => (
-            <span
-              key={engine}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0B0B0B] border border-[#292929] text-zinc-400 text-[10px]"
-            >
-              <CheckCircle2 className="w-2.5 h-2.5 text-zinc-500" />
-              {engine}
+      {/* Protocol Architecture Explanation Card */}
+      {showProtocolInfo && (
+        <div className="p-3.5 rounded-xl bg-surface border border-border text-xs font-mono space-y-2.5 shadow-xl animate-in fade-in duration-150">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <span className="font-bold text-foreground flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-lime" />
+              Dual-Engine Protocol Architecture
             </span>
-          ))}
+            <button
+              type="button"
+              onClick={() => setShowProtocolInfo(false)}
+              className="text-foreground-muted hover:text-foreground p-1 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300 text-[11px]">
+                <Zap className="w-3.5 h-3.5" />
+                ⚡ Direct REST API
+              </div>
+              <p className="text-[11px] text-foreground-secondary font-sans leading-relaxed">
+                Queries <code className="text-amber-700 dark:text-amber-300 text-[10px]">serpapi.com/search</code> directly. Returns complete uncompressed SERP JSON payloads, cached pages, and full telemetry.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-purple-700 dark:text-purple-300 text-[11px]">
+                <Bot className="w-3.5 h-3.5" />
+                🤖 SerpApi MCP Stream
+              </div>
+              <p className="text-[11px] text-foreground-secondary font-sans leading-relaxed">
+                Connects via official <code className="text-purple-700 dark:text-purple-300 text-[10px]">mcp.serpapi.com</code> tool gateway. Lightweight stream <strong>cuts LLM token overhead by ~60%</strong>.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Expandable Phase 2 Radar & Ungated Dork Inspector */}
       {showConfig && (
-        <div className="p-4 rounded-xl bg-[#0B0B0B] border border-purple-500/30 shadow-xl backdrop-blur-md space-y-4 animate-in fade-in duration-200">
+        <div className="p-4 rounded-xl bg-surface border border-purple-500/40 shadow-xl backdrop-blur-md space-y-4 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-500/20 pb-2.5">
             <div>
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-purple-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-200">
-                  Phase 2 Threat Radar Config &amp; Dork Strategy Inspector
+                <SlidersHorizontal className="w-4 h-4 text-purple-500" />
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-200">
+                  Dork Strategy &amp; Recon Hunter Config
                 </h4>
               </div>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-foreground-secondary mt-0.5">
                 Inspect, toggle, and customize live SerpApi dork signatures. Zero black-box gatekeeping.
               </p>
             </div>
-            <div className="text-[10px] font-mono text-purple-300 bg-purple-950/40 border border-purple-800/40 px-2 py-1 rounded">
-              Active Signatures: {Object.values(getEnabledVectors()).filter(Boolean).length} / 6
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-1 rounded">
+                Active Signatures: {Object.values(getEnabledVectors()).filter(Boolean).length} / 6
+              </div>
+              <span className="text-[10px] text-foreground-muted hidden sm:inline">
+                (Unchecked = strictly bypassed, 0 queries dispatched)
+              </span>
             </div>
           </div>
 
           {/* Vector Toggle Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
             {/* Cloud Storage */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorCloud}
                 onChange={(e) => setVectorCloud(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-sky-500 focus:ring-sky-400"
+                className="mt-0.5 rounded bg-surface border-border text-sky-500 focus:ring-sky-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Cloud className="w-3.5 h-3.5 text-sky-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Cloud className="w-3.5 h-3.5 text-sky-500" />
                   <span>Multi-Cloud Bucket Hunter</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   AWS S3, Azure Blob, GCS, DO Spaces
                 </p>
               </div>
             </label>
 
             {/* GitHub Leaks */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorGithub}
                 onChange={(e) => setVectorGithub(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-red-500 focus:ring-red-400"
+                className="mt-0.5 rounded bg-surface border-border text-red-500 focus:ring-red-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Github className="w-3.5 h-3.5 text-red-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Github className="w-3.5 h-3.5 text-red-500" />
                   <span>GitHub Secret &amp; Key Leaks</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   .env, RSA keys, secrets.json, Gists
                 </p>
               </div>
             </label>
 
             {/* YouTube Radar */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorYoutube}
                 onChange={(e) => setVectorYoutube(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-rose-500 focus:ring-rose-400"
+                className="mt-0.5 rounded bg-surface border-border text-rose-500 focus:ring-rose-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Youtube className="w-3.5 h-3.5 text-rose-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Youtube className="w-3.5 h-3.5 text-rose-500" />
                   <span>YouTube Exploit Radar</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   Researcher PoC videos &amp; bug bounties
                 </p>
               </div>
             </label>
 
             {/* Google Play */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorPlay}
                 onChange={(e) => setVectorPlay(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-emerald-500 focus:ring-emerald-400"
+                className="mt-0.5 rounded bg-surface border-border text-emerald-500 focus:ring-emerald-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Google Play Mobile Perimeter</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   Client Android packages &amp; ratings
                 </p>
               </div>
             </label>
 
             {/* Google News */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorNews}
                 onChange={(e) => setVectorNews(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-amber-500 focus:ring-amber-400"
+                className="mt-0.5 rounded bg-surface border-border text-amber-500 focus:ring-amber-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Newspaper className="w-3.5 h-3.5 text-amber-500" />
                   <span>Threat Intelligence News</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   Breach disclosures &amp; security bulletins
                 </p>
               </div>
             </label>
 
             {/* External Footprint */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#111111] border border-[#292929] hover:border-zinc-700 cursor-pointer transition select-none">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong cursor-pointer transition select-none shadow-sm">
               <input
                 type="checkbox"
                 checked={vectorFootprint}
                 onChange={(e) => setVectorFootprint(e.target.checked)}
-                className="mt-0.5 rounded bg-[#0B0B0B] border-[#292929] text-cyan-500 focus:ring-cyan-400"
+                className="mt-0.5 rounded bg-surface border-border text-cyan-500 focus:ring-cyan-400"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-                  <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Globe2 className="w-3.5 h-3.5 text-cyan-500" />
                   <span>External Directory Footprint</span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-400">
+                <p className="text-[10px] font-mono text-foreground-muted">
                   Tool catalogs, mentions &amp; marketplaces
                 </p>
               </div>
@@ -330,13 +376,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
           {/* Ungated Custom Dork Injector */}
           <div className="pt-2 border-t border-purple-500/20 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
-                <Terminal className="w-3.5 h-3.5 text-purple-400" />
+              <label className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-purple-500" />
                 <span>Inject Custom SerpApi Threat-Hunting Dork (Ungated)</span>
               </label>
-              <span className="text-[10px] text-zinc-500 font-mono">
-                Variables: <code className="text-purple-300 font-bold">&#123;target&#125;</code>,{" "}
-                <code className="text-purple-300 font-bold">&#123;brand&#125;</code>
+              <span className="text-[10px] text-foreground-muted font-mono">
+                Variables: <code className="text-purple-600 dark:text-purple-300 font-bold">&#123;target&#125;</code>,{" "}
+                <code className="text-purple-600 dark:text-purple-300 font-bold">&#123;brand&#125;</code>
               </span>
             </div>
 
@@ -347,12 +393,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
                 onChange={(e) => setCustomDorkInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCustomDork(e))}
                 placeholder='e.g. site:{target} inurl:grafana  OR  site:gitlab.com "{brand}" filename:.env'
-                className="flex-1 px-3 py-2 rounded-lg bg-[#111111] border border-[#292929] text-zinc-100 placeholder-zinc-500 text-xs font-mono focus:outline-none focus:border-purple-400"
+                className="flex-1 px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-foreground-muted text-xs font-mono focus:outline-none focus:border-purple-500 shadow-sm"
               />
               <button
                 type="button"
                 onClick={handleAddCustomDork}
-                className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs flex items-center gap-1 cursor-pointer transition active:scale-95"
+                className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Dork</span>
@@ -362,17 +408,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onScan, isScanning }) => {
             {/* Render Active Custom Dorks */}
             {customDorks.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                <span className="text-[10px] font-mono text-zinc-400">Custom Queries:</span>
+                <span className="text-[10px] font-mono text-foreground-muted">Custom Queries:</span>
                 {customDorks.map((dork) => (
                   <span
                     key={dork}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-950/60 border border-purple-700/60 text-purple-200 text-xs font-mono"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/40 text-purple-700 dark:text-purple-200 text-xs font-mono shadow-sm"
                   >
                     <span>{dork}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveCustomDork(dork)}
-                      className="text-purple-400 hover:text-white ml-1 cursor-pointer"
+                      className="text-purple-500 hover:text-purple-700 dark:hover:text-white ml-1 cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>

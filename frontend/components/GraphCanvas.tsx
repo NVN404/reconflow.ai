@@ -14,7 +14,8 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeftRight, ArrowUpDown, ShieldCheck, ShieldAlert, Network } from "lucide-react";
+import { ArrowLeftRight, ArrowUpDown, Network } from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
 
 import { RootNode } from "./nodes/RootNode";
 import { AssetNode } from "./nodes/AssetNode";
@@ -39,14 +40,18 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
   layoutDirection = "TB",
   onToggleLayout,
 }) => {
-  const { fitView } = useReactFlow();
+  const { fitView, setCenter, getZoom } = useReactFlow();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const nodeTypes = useMemo(
     () => ({
       rootNode: RootNode,
       assetNode: AssetNode,
+      subdomainNode: AssetNode,
       findingNode: FindingNode,
       externalNode: ExternalNode,
+      externalExposureNode: ExternalNode,
     }),
     []
   );
@@ -84,26 +89,26 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
       const isSecureEdge = edge.label === "PERIMETER_SECURE" || edge.style?.stroke === "#10b981";
       const isAnimated = edge.animated ?? isCriticalEdge;
 
-      let strokeColor = "#383838";
+      let strokeColor = isDark ? "#383838" : "#94a3b8";
       let strokeWidth = 1.25;
-      let labelTextColor = "#A0A09C";
-      let labelBorderColor = "#292929";
+      let labelTextColor = isDark ? "#A0A09C" : "#334155";
+      let labelBorderColor = isDark ? "#292929" : "#cbd5e1";
 
       if (isCriticalEdge) {
         strokeColor = "#f43f5e";
         strokeWidth = 1.75;
-        labelTextColor = "#f43f5e";
+        labelTextColor = isDark ? "#f43f5e" : "#be123c";
         labelBorderColor = "rgba(244, 63, 94, 0.4)";
       } else if (isSecureEdge) {
-        strokeColor = "#10b981";
+        strokeColor = isDark ? "#10b981" : "#059669";
         strokeWidth = 1.25;
-        labelTextColor = "#10b981";
+        labelTextColor = isDark ? "#10b981" : "#047857";
         labelBorderColor = "rgba(16, 185, 129, 0.4)";
       } else if (isConnectedToSelected) {
-        strokeColor = "#F7F7F5";
-        strokeWidth = 1.75;
-        labelTextColor = "#F7F7F5";
-        labelBorderColor = "#383838";
+        strokeColor = isDark ? "#F7F7F5" : "#0f172a";
+        strokeWidth = 2;
+        labelTextColor = isDark ? "#F7F7F5" : "#0f172a";
+        labelBorderColor = isDark ? "#383838" : "#64748b";
       }
 
       return {
@@ -122,7 +127,7 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
           fontFamily: "var(--font-mono, monospace)",
         },
         labelBgStyle: {
-          fill: "#0B0B0B",
+          fill: isDark ? "#0B0B0B" : "#ffffff",
           fillOpacity: 0.95,
           stroke: labelBorderColor,
           strokeWidth: 1,
@@ -132,84 +137,35 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
         labelBgPadding: [6, 3] as [number, number],
       };
     });
-  }, [edges, selectedNodeId]);
+  }, [edges, selectedNodeId, isDark]);
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {
     onNodeClick(node as unknown as GraphNode);
+
+    // Zoom and pan the clicked box smoothly to the LEFT side of the canvas
+    // so the box remains 100% visible while the pop-up drawer slides in on the right!
+    if (node.position) {
+      const targetZoom = Math.max(getZoom(), 1.05);
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      // 320px screen offset pushes the node into the clear left-hand viewport
+      const screenOffset = isMobile ? 0 : 320;
+      const canvasOffsetX = screenOffset / targetZoom;
+
+      setCenter(node.position.x + 130 + canvasOffsetX, node.position.y + 75, {
+        zoom: targetZoom,
+        duration: 500,
+      });
+    }
   };
 
-  const infoCount = useMemo(() => {
-    return nodes.filter((n) => (n.data as any)?.section !== "VULNERABILITY").length;
-  }, [nodes]);
-
-  const activeVulnCount = useMemo(() => {
-    return nodes.filter(
-      (n) =>
-        (n.data as any)?.section === "VULNERABILITY" &&
-        (n.data as any)?.category !== "VULN_STATUS_CLEAN"
-    ).length;
-  }, [nodes]);
-
-  const externalCount = useMemo(() => {
-    return nodes.filter(
-      (n) =>
-        (n.data as any)?.origin === "EXTERNAL" ||
-        n.type === "externalExposureNode" ||
-        ["CUSTOM_DORK", "S3_LEAK", "GITHUB_LEAK", "GITHUB_REPO", "YOUTUBE_POC", "MOBILE_APP", "NEWS_BREACH", "BRAND_PRESENCE"].includes((n.data as any)?.category)
-    ).length;
-  }, [nodes]);
-
   return (
-    <div className="w-full h-[640px] rounded-xl border border-zinc-800 bg-[#050505] shadow-2xl relative overflow-hidden flex flex-col">
-      {/* Canvas Header Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between pointer-events-none gap-2">
-        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
-          {/* Zone 1: Assets & Topology */}
-          <div className="flex items-center gap-2 bg-[#0B0B0B]/95 backdrop-blur-md px-3 py-1.5 rounded-md border border-zinc-800 text-xs font-mono text-zinc-100 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-zinc-400" />
-            <span className="font-semibold text-xs tracking-tight">ZONE 1: ASSETS</span>
-            <span className="px-1.5 py-0.2 rounded bg-[#111111] text-[10px] font-bold text-zinc-400 border border-zinc-800">
-              {infoCount}
-            </span>
-          </div>
-
-          {/* Zone 2: Vulnerability Perimeter */}
-          <div
-            className={`flex items-center gap-2 backdrop-blur-md px-3 py-1.5 rounded-md border text-xs font-mono shadow-sm ${
-              activeVulnCount > 0
-                ? "bg-rose-950/80 border-rose-800/80 text-rose-300"
-                : "bg-emerald-950/80 border-emerald-800/80 text-emerald-300"
-            }`}
-          >
-            {activeVulnCount > 0 ? (
-              <>
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                <span className="font-semibold text-xs tracking-tight">ZONE 2: VULNERABILITIES</span>
-                <span className="px-1.5 py-0.2 rounded bg-rose-900/50 text-[10px] font-bold text-rose-200">
-                  {activeVulnCount} Leaks
-                </span>
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="font-semibold text-xs tracking-tight">ZONE 2: POSTURE</span>
-                <span className="px-1.5 py-0.2 rounded bg-emerald-900/50 text-[10px] font-bold text-emerald-300">
-                  0 Active Leaks
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Phase 2: Threat Radar Badge */}
-          {externalCount > 0 && (
-            <div className="flex items-center gap-2 bg-[#120822]/95 backdrop-blur-md px-3 py-1.5 rounded-md border border-purple-800/80 text-xs font-mono text-purple-300 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <span className="font-semibold text-xs tracking-tight">PHASE 2: THREAT RADAR</span>
-              <span className="px-1.5 py-0.2 rounded bg-purple-900/50 text-[10px] font-bold text-purple-200">
-                {externalCount}
-              </span>
-            </div>
-          )}
+    <div className="w-full h-[640px] rounded-xl border border-border bg-slate-100/90 dark:bg-[#070707] shadow-xl relative overflow-hidden flex flex-col transition-colors duration-200">
+      {/* Canvas Header Bar: Clean & Minimal (Unobtrusive Layout Switcher) */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <span className="text-[11px] font-mono text-foreground-muted bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded border border-border shadow-sm">
+            Topology DAG Canvas
+          </span>
         </div>
 
         {/* Layout Switcher */}
@@ -217,19 +173,19 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={onToggleLayout}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0B0B0B] hover:bg-[#111111] border border-zinc-800 hover:border-zinc-700 text-xs font-mono font-medium text-zinc-100 shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface hover:bg-surface-elevated border border-border hover:border-border-strong text-xs font-mono font-medium text-foreground shadow-sm transition-all cursor-pointer"
               title={`Switch graph layout to ${
                 layoutDirection === "TB" ? "Horizontal" : "Vertical"
               }`}
             >
               {layoutDirection === "TB" ? (
                 <>
-                  <ArrowLeftRight className="w-3.5 h-3.5 text-zinc-400" />
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-foreground-secondary" />
                   <span>Layout: Vertical</span>
                 </>
               ) : (
                 <>
-                  <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
+                  <ArrowUpDown className="w-3.5 h-3.5 text-foreground-secondary" />
                   <span>Layout: Horizontal</span>
                 </>
               )}
@@ -241,14 +197,14 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
       {/* Empty State when no nodes */}
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-6 z-0">
-          <div className="w-12 h-12 rounded-xl bg-[#0B0B0B] border border-zinc-800 flex items-center justify-center text-zinc-400 mb-4">
-            <Network className="w-6 h-6 text-zinc-400" />
+          <div className="w-12 h-12 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-foreground-muted mb-4 shadow-sm">
+            <Network className="w-6 h-6 text-foreground-muted" />
           </div>
-          <p className="text-sm font-bold font-mono text-zinc-100 mb-1">
+          <p className="text-sm font-bold font-mono text-foreground mb-1">
             Attack Surface Graph Empty
           </p>
-          <p className="text-xs text-zinc-400 max-w-sm">
-            Enter a domain above or click a preset to execute multi-engine reconnaissance and render the attack-surface DAG topology.
+          <p className="text-xs text-foreground-secondary max-w-sm">
+            Enter a domain above and click Execute Recon to sweep engines and render the attack-surface DAG topology.
           </p>
         </div>
       )}
@@ -271,19 +227,19 @@ const CanvasInner: React.FC<GraphCanvasProps> = ({
           type: "smoothstep",
         }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#292929" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} color={isDark ? "#292929" : "#94a3b8"} />
         <Controls />
         <MiniMap
           nodeColor={(n) => {
-            if (n.type === "rootNode") return "#B7E36A";
-            if (n.type === "assetNode") return "#6F6F6B";
+            if (n.type === "rootNode") return isDark ? "#B7E36A" : "#4d7c0f";
+            if (n.type === "assetNode") return isDark ? "#6F6F6B" : "#94a3b8";
             if ((n.data as any)?.category === "VULN_STATUS_CLEAN") return "#10b981";
             const severity = (n.data as any)?.severity;
             if (severity === "CRITICAL") return "#f43f5e";
             if (severity === "HIGH") return "#f97316";
-            return "#383838";
+            return isDark ? "#383838" : "#cbd5e1";
           }}
-          maskColor="rgba(8, 8, 8, 0.8)"
+          maskColor={isDark ? "rgba(8, 8, 8, 0.8)" : "rgba(241, 245, 249, 0.7)"}
         />
       </ReactFlow>
     </div>

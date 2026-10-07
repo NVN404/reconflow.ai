@@ -47,7 +47,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F7F7F5] flex flex-col font-sans selection:bg-[#B7E36A]/20 selection:text-[#B7E36A]">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-lime/20 selection:text-lime transition-colors duration-200">
       {/* Top Navbar */}
       <Navbar onStartReconClick={() => handleStartRecon("reconflow.render.com")} />
 

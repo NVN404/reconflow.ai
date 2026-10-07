@@ -48,8 +48,56 @@ def get_gemini_api_key() -> str:
                 pass
     return os.getenv("GEMINI_API_KEY", "").strip()
 
+def get_stytch_project_id() -> str:
+    for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env"]:
+        if env_path.exists():
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("STYTCH_PROJECT_ID="):
+                            val = line_s.split("STYTCH_PROJECT_ID=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                return val
+            except Exception:
+                pass
+    return os.getenv("STYTCH_PROJECT_ID", "").strip()
+
+def get_stytch_secret() -> str:
+    for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env"]:
+        if env_path.exists():
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("STYTCH_SECRET="):
+                            val = line_s.split("STYTCH_SECRET=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                return val
+            except Exception:
+                pass
+    return os.getenv("STYTCH_SECRET", "").strip()
+
+def get_resend_api_key() -> str:
+    for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env"]:
+        if env_path.exists():
+            try:
+                with open(env_path) as f:
+                    for line in f:
+                        line_s = line.strip()
+                        if line_s.startswith("RESEND_API_KEY="):
+                            val = line_s.split("RESEND_API_KEY=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                return val
+            except Exception:
+                pass
+    return os.getenv("RESEND_API_KEY", "").strip()
+
 SERPAPI_KEY = get_serpapi_key()
 GEMINI_API_KEY = get_gemini_api_key()
+RESEND_API_KEY = get_resend_api_key()
+STYTCH_PROJECT_ID = get_stytch_project_id()
+STYTCH_SECRET = get_stytch_secret()
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8001"))
 

@@ -13,44 +13,44 @@ export const RootNode = memo(({ data, selected }: RootNodeProps) => {
 
   return (
     <div
-      className={`relative w-[260px] p-4 rounded-lg bg-[#0B0B0B] border transition-all duration-200 cursor-pointer ${
+      className={`relative w-[260px] p-4 rounded-xl transition-all duration-200 cursor-pointer ${
         selected
-          ? "border-[#F7F7F5] ring-2 ring-[#B7E36A]/40 shadow-xl shadow-[#B7E36A]/5 bg-[#111111]"
-          : "border-[#292929] hover:border-[#383838] hover:bg-[#111111] shadow-lg"
+          ? "bg-white dark:bg-[#0c0c0c] border-2 border-emerald-500 dark:border-lime ring-4 ring-emerald-500/30 dark:ring-lime/30 shadow-xl"
+          : "bg-white dark:bg-[#0c0c0c] border-2 border-emerald-500/80 dark:border-lime/70 hover:border-emerald-600 dark:hover:border-lime shadow-md"
       }`}
     >
       {/* Top Row: Icon + Category Label */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-[#111111] border border-[#292929] text-[#B7E36A] flex items-center justify-center flex-shrink-0 shadow-inner">
+          <div className="w-6 h-6 rounded bg-emerald-50 text-emerald-700 dark:bg-lime/10 dark:text-lime border border-emerald-200 dark:border-lime/30 flex items-center justify-center flex-shrink-0 shadow-inner">
             <Globe className="w-3.5 h-3.5" />
           </div>
-          <span className="text-[10px] font-mono font-semibold text-[#A0A09C] uppercase tracking-wider">
+          <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
             Apex Target
           </span>
         </div>
-        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-[#111111] text-[#B7E36A] border border-[#B7E36A]/30 uppercase">
+        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-lime/20 dark:text-lime dark:border-lime/40 uppercase">
           ROOT
         </span>
       </div>
 
       {/* Main Title: Domain Name */}
-      <h3 className="text-sm font-bold text-[#F7F7F5] font-mono truncate mt-2.5 tracking-tight" title={data.label}>
+      <h3 className="text-sm font-black text-slate-900 dark:text-zinc-100 font-mono truncate mt-2.5 tracking-tight" title={data.label}>
         {data.label}
       </h3>
 
       {/* Bottom Row: Surface Telemetry & Status */}
-      <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-[#292929]">
-        <span className="text-[11px] font-mono text-[#6F6F6B] truncate max-w-[150px]">
+      <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+        <span className="text-[11px] font-mono text-slate-600 dark:text-zinc-400 truncate max-w-[150px]">
           {data.surface || "Apex DNS Target"}
         </span>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#B7E36A] flex-shrink-0" />
+        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-lime flex-shrink-0 animate-pulse" />
       </div>
 
       <Handle
         type="source"
         position={isHorizontal ? Position.Right : Position.Bottom}
-        className="!bg-[#B7E36A] !border-[#050505] !w-2.5 !h-2.5 shadow-sm"
+        className="!bg-emerald-500 dark:!bg-lime !border-background !w-2.5 !h-2.5 shadow-sm"
       />
     </div>
   );

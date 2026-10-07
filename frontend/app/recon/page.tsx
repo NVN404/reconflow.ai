@@ -23,9 +23,11 @@ import { FindingDrawer } from "@/components/FindingDrawer";
 import { ThoughtStream } from "@/components/ThoughtStream";
 import { CorporateAuthModal } from "@/components/CorporateAuthModal";
 import { PaymentModal } from "@/components/PaymentModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { getLayoutedElements } from "@/lib/layout";
 import { ScanResult, GraphNode, AgentThought } from "@/lib/types";
+import { generateAuditDossier } from "@/lib/dossier";
 
 const initialScanResult: ScanResult = {
   summary: {
@@ -42,7 +44,7 @@ const initialScanResult: ScanResult = {
     generated_at: "2026-10-05T00:00:00Z",
   },
   executive_summary:
-    "ReconFlow AI Standing By. Enter any target perimeter (e.g. reconflow.render.com) to initiate autonomous multi-engine external reconnaissance across Google, Bing, DuckDuckGo, YouTube, and Google Play.",
+    "ReconFlow AI Standing By. Enter any target perimeter (e.g. reconflow.render.com) to initiate autonomous external reconnaissance.",
   nodes: [],
   edges: [],
   thoughts: [],
@@ -75,6 +77,7 @@ function ReconWorkspaceContent() {
     enablePhase2: boolean;
     customDorks: string[];
     enabledVectors?: Record<string, boolean>;
+    protocol?: "rest" | "mcp";
   } | null>(null);
 
   // Pricing / Scan Limits (1 Free Scan per Day for Hackathon demo)
@@ -91,13 +94,13 @@ function ReconWorkspaceContent() {
     {
       timestamp: "READY",
       stage: "ARMED",
-      message: "ReconFlow AI Multi-Engine Agent initialized (Google, Bing, DuckDuckGo, YouTube, Google Play).",
+      message: "ReconFlow AI Autonomous Recon Agent initialized. Standing by for target perimeter.",
       status: "info",
     },
     {
       timestamp: "READY",
       stage: "READY",
-      message: "100% Pure SerpApi Autonomous Recon active (Passive Search Intelligence). Ready to audit target perimeter.",
+      message: "Autonomous passive external reconnaissance engine armed.",
       status: "success",
     },
   ]);
@@ -142,17 +145,21 @@ function ReconWorkspaceContent() {
     }
 
     let filteredNodes = scanResult.nodes;
-    if (activeFilter === "CRITICAL") {
+    if (activeFilter === "VULNERABILITIES") {
+      filteredNodes = scanResult.nodes.filter(
+        (n) => n.data.severity === "CRITICAL" || n.data.severity === "HIGH" || n.data.severity === "MEDIUM"
+      );
+    } else if (activeFilter === "CRITICAL") {
       filteredNodes = scanResult.nodes.filter((n) => n.data.severity === "CRITICAL");
     } else if (activeFilter === "HIGH") {
       filteredNodes = scanResult.nodes.filter((n) => n.data.severity === "HIGH");
     } else if (activeFilter === "MEDIUM") {
       filteredNodes = scanResult.nodes.filter((n) => n.data.severity === "MEDIUM");
-    } else if (activeFilter === "ASSETS") {
+    } else if (activeFilter === "ASSETS" || activeFilter === "LOW") {
       filteredNodes = scanResult.nodes.filter(
         (n) => n.type === "rootNode" || n.type === "subdomainNode"
       );
-    } else if (activeFilter === "RADAR") {
+    } else if (activeFilter === "RADAR" || activeFilter === "THREAT_RADAR") {
       filteredNodes = scanResult.nodes.filter(
         (n) =>
           n.data.surface === "Threat Radar" ||
@@ -177,7 +184,8 @@ function ReconWorkspaceContent() {
     domain: string,
     enablePhase2: boolean = true,
     customDorks: string[] = [],
-    enabledVectors?: Record<string, boolean>
+    enabledVectors?: Record<string, boolean>,
+    protocol: "rest" | "mcp" = "rest"
   ) => {
     setIsScanning(true);
     setSelectedNode(null);
@@ -187,7 +195,7 @@ function ReconWorkspaceContent() {
       {
         timestamp: startTime,
         stage: "DISPATCH",
-        message: `Deploying live SerpApi multi-engine recon agent for target: ${domain}...`,
+        message: `Deploying live SerpApi multi-engine recon agent for target: ${domain} via ${protocol === "mcp" ? "SerpApi MCP Protocol" : "Direct REST"}...`,
         status: "info",
       },
     ]);
@@ -206,6 +214,7 @@ function ReconWorkspaceContent() {
           use_cache: false,
           custom_dorks: customDorks,
           enabled_vectors: enabledVectors,
+          protocol,
         }),
       });
 
@@ -248,19 +257,25 @@ function ReconWorkspaceContent() {
     domain: string,
     enablePhase2: boolean = true,
     customDorks: string[] = [],
-    enabledVectors?: Record<string, boolean>
+    enabledVectors?: Record<string, boolean>,
+    protocol: "rest" | "mcp" = "rest"
   ) => {
-    // 1. Scan Limit Check (1 Free Scan per Day on Community plan)
-    if (scanCount >= 1 && !isProMember) {
-      setIsPaymentModalOpen(true);
-      return;
-    }
-
     const cleanTarget = domain
       .toLowerCase()
       .replace(/^https?:\/\//, "")
       .replace(/\/.*$/, "")
       .replace(/^www\./, "");
+
+    // 1. Scan Limit Check (1 Free Scan per Day on Community plan, demo testbed exempt)
+    if (
+      scanCount >= 1 &&
+      !isProMember &&
+      cleanTarget !== "vulnweb.com" &&
+      cleanTarget !== "reconflow.render.com"
+    ) {
+      setIsPaymentModalOpen(true);
+      return;
+    }
 
     // 2. Corporate Work Email Match Check
     const isAuthorized =
@@ -276,25 +291,26 @@ function ReconWorkspaceContent() {
         enablePhase2,
         customDorks,
         enabledVectors,
+        protocol,
       });
       setIsAuthModalOpen(true);
       return;
     }
 
-    executeScanRequest(cleanTarget, enablePhase2, customDorks, enabledVectors);
+    executeScanRequest(cleanTarget, enablePhase2, customDorks, enabledVectors, protocol);
   };
 
   const handleCorporateVerified = (session: CorporateSession) => {
     setCorporateSession(session);
-    if (pendingScan && pendingScan.domain === session.domain) {
-      executeScanRequest(
-        pendingScan.domain,
-        pendingScan.enablePhase2,
-        pendingScan.customDorks,
-        pendingScan.enabledVectors
-      );
-      setPendingScan(null);
-    }
+    const targetToScan = session.domain || pendingScan?.domain || "reconflow.render.com";
+    executeScanRequest(
+      targetToScan,
+      pendingScan?.enablePhase2 ?? true,
+      pendingScan?.customDorks ?? [],
+      pendingScan?.enabledVectors,
+      pendingScan?.protocol || "rest"
+    );
+    setPendingScan(null);
   };
 
   const handlePaymentSuccess = () => {
@@ -308,7 +324,8 @@ function ReconWorkspaceContent() {
         pendingScan.domain,
         pendingScan.enablePhase2,
         pendingScan.customDorks,
-        pendingScan.enabledVectors
+        pendingScan.enabledVectors,
+        pendingScan.protocol || "rest"
       );
       setPendingScan(null);
     }
@@ -319,51 +336,37 @@ function ReconWorkspaceContent() {
   };
 
   const handleExportDossier = () => {
-    if (!scanResult) return;
-    const { summary, executive_summary, nodes } = scanResult;
+    if (!scanResult || scanResult.nodes.length === 0) return;
+    const md = generateAuditDossier(scanResult);
 
-    let md = `# EXECUTIVE ATTACK SURFACE AUDIT DOSSIER: ${summary.target.toUpperCase()}\n\n`;
-    md += `**Generated By:** ReconFlow AI (Autonomous EASM Agent)\n`;
-    md += `**Date:** ${new Date().toUTCString()}\n`;
-    md += `**Security Posture Grade:** ${summary.security_grade} (${summary.security_score}/100)\n`;
-    md += `**SerpApi Credits Consumed:** ${summary.serpapi_credits_used}\n\n`;
-    md += `## 1. Executive Summary\n${executive_summary}\n\n`;
-    md += `## 2. Risk Distribution\n`;
-    md += `| Severity | Finding Count |\n| :--- | :--- |\n`;
-    md += `| **CRITICAL** | ${summary.critical_risks} |\n`;
-    md += `| **HIGH** | ${summary.high_risks} |\n`;
-    md += `| **MEDIUM** | ${summary.medium_risks} |\n`;
-    md += `| **LOW / ASSETS** | ${summary.low_risks} |\n`;
-    md += `| **TOTAL NODES** | ${summary.total_nodes} |\n\n`;
-
-    const blob = new Blob([md], { type: "text/markdown" });
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ReconFlow_Dossier_${summary.target}.md`;
+    a.download = `ReconFlow_Dossier_${scanResult.summary.target || "audit"}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F7F7F5] flex flex-col font-mono selection:bg-[#B7E36A]/20 selection:text-[#B7E36A]">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-mono selection:bg-lime/20 selection:text-lime transition-colors duration-200">
       {/* Top Application Workspace Bar */}
-      <header className="fixed top-0 inset-x-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-zinc-800/80 px-4 sm:px-6 py-3">
+      <header className="fixed top-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-md border-b border-border px-4 sm:px-6 py-3 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-100 transition-colors p-1 rounded hover:bg-zinc-800/50"
+              className="flex items-center gap-1.5 text-xs text-foreground-secondary hover:text-foreground transition-colors p-1 rounded hover:bg-surface-elevated"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Landing</span>
             </Link>
-            <div className="h-4 w-px bg-zinc-800" />
+            <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-zinc-100 tracking-tight">
-                RECONFLOW<span className="text-[#B7E36A]">.AI</span>
+              <span className="text-sm font-bold text-foreground tracking-tight">
+                RECONFLOW<span className="text-lime">.AI</span>
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-surface-elevated border border-border text-foreground-muted">
                 Workspace
               </span>
             </div>
@@ -372,27 +375,30 @@ function ReconWorkspaceContent() {
           <div className="flex items-center gap-3">
             {/* Pro Badge / Scan Counter */}
             {isProMember ? (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded bg-[#B7E36A]/10 border border-[#B7E36A]/30 text-[#B7E36A] text-[10px] font-bold">
-                <Zap className="w-3 h-3 fill-[#B7E36A]" />
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded bg-lime/15 border border-lime/30 text-lime text-[10px] font-bold">
+                <Zap className="w-3 h-3 fill-lime" />
                 <span>PRO ACTIVE</span>
               </span>
             ) : (
               <button
                 onClick={() => setIsPaymentModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/40 border border-amber-800/50 text-amber-300 text-[10px] font-bold hover:bg-amber-950/70 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/15 dark:bg-amber-950/40 border border-amber-500/30 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-[10px] font-bold hover:bg-amber-500/25 transition-all cursor-pointer"
               >
                 <span>{scanCount >= 1 ? "Daily Limit Reached (1/1)" : "Free Scan Available (0/1)"}</span>
-                <span className="text-[#B7E36A] underline">Upgrade</span>
+                <span className="text-lime underline">Upgrade</span>
               </button>
             )}
+
+            {/* Theme Toggle (Light / Dark mode) */}
+            <ThemeToggle />
 
             {/* Export Dossier */}
             <button
               onClick={handleExportDossier}
-              className="flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-md bg-[#121212] hover:bg-[#181818] text-zinc-200 border border-zinc-800 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-md bg-surface hover:bg-surface-elevated text-foreground border border-border shadow-sm transition-all cursor-pointer"
               title="Download executive audit dossier markdown"
             >
-              <Download className="w-3.5 h-3.5 text-[#B7E36A]" />
+              <Download className="w-3.5 h-3.5 text-lime" />
               <span className="hidden sm:inline">Export Dossier</span>
             </button>
           </div>
@@ -445,32 +451,32 @@ function ReconWorkspaceContent() {
 
         {/* Workspace Title & Purpose */}
         <div className="max-w-3xl pt-4">
-          <div className="inline-flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider mb-2">
+          <div className="inline-flex items-center gap-2 text-xs font-mono text-foreground-muted uppercase tracking-wider mb-2">
             <span>Autonomous Reconnaissance // Live Canvas</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Interactive Attack-Surface Topology
           </h1>
-          <p className="mt-1.5 text-xs text-zinc-400 font-sans">
+          <p className="mt-1.5 text-xs text-foreground-secondary font-sans">
             Audit external perimeters, correlate multi-engine search dorks, inspect CVSS/OWASP vulnerability evidence, and execute defensive playbooks.
           </p>
         </div>
 
         {/* Corporate Work Email Session / Authorization Status Gate */}
         {!corporateSession ? (
-          <div className="p-4 rounded-xl bg-[#0F0F0F] border border-amber-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs shadow-lg">
+          <div className="p-4 rounded-xl bg-amber-500/10 dark:bg-[#0F0F0F] border border-amber-500/30 dark:border-amber-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-950/70 border border-amber-800/80 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/20 dark:bg-amber-950/70 border border-amber-500/40 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
                 <Lock className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-bold text-zinc-100 flex items-center gap-2">
+                <div className="font-bold text-foreground flex items-center gap-2">
                   <span>Protected Workspace: Corporate Work Email Required</span>
-                  <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded font-mono">
+                  <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 dark:border-amber-800 px-2 py-0.5 rounded font-mono">
                     Restricted Access
                   </span>
                 </div>
-                <p className="text-zinc-400 font-sans text-xs mt-0.5">
+                <p className="text-foreground-secondary font-sans text-xs mt-0.5">
                   Public scanning is disabled to prevent unauthorized intelligence gathering. Audits are strictly restricted to verified employees of the target organization.
                 </p>
               </div>
@@ -480,27 +486,27 @@ function ReconWorkspaceContent() {
                 setAuthTargetDomain(initialTarget);
                 setIsAuthModalOpen(true);
               }}
-              className="px-4 py-2.5 rounded-lg bg-[#B7E36A] hover:bg-[#a5cf5c] text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md whitespace-nowrap self-start sm:self-auto transition-all active:scale-[0.98]"
+              className="px-4 py-2.5 rounded-lg bg-lime hover:opacity-90 text-background font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md whitespace-nowrap self-start sm:self-auto transition-all active:scale-[0.98]"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Verify Corporate Email</span>
             </button>
           </div>
         ) : (
-          <div className="p-3.5 rounded-xl bg-[#0B150B] border border-emerald-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs shadow-md">
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 dark:bg-[#0B150B] border border-emerald-500/30 dark:border-emerald-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs shadow-sm">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-zinc-300">
-                Authorized Corporate Identity: <span className="text-emerald-400 font-bold">{corporateSession.email}</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-foreground">
+                Authorized Corporate Identity: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{corporateSession.email}</span>
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-800/70">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-800/70">
                 {corporateSession.companyName} Verified Staff
               </span>
-              <span className="text-zinc-500 text-[11px]">| Target Perimeter: @{corporateSession.domain}</span>
+              <span className="text-foreground-muted text-[11px]">| Target Perimeter: @{corporateSession.domain}</span>
             </div>
             <button
               onClick={() => setCorporateSession(null)}
-              className="text-zinc-400 hover:text-zinc-200 text-[11px] flex items-center gap-1.5 cursor-pointer self-start sm:self-auto px-2 py-1 rounded hover:bg-zinc-800/50 transition-colors"
+              className="text-foreground-secondary hover:text-foreground text-[11px] flex items-center gap-1.5 cursor-pointer self-start sm:self-auto px-2 py-1 rounded hover:bg-surface-elevated transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Switch Company / Sign Out</span>
@@ -513,12 +519,12 @@ function ReconWorkspaceContent() {
 
         {/* Executive Threat Briefing Callout */}
         {scanResult?.executive_summary && (
-          <div className="p-4 rounded-lg bg-[#0B0B0B] border border-zinc-800 flex items-start gap-3.5 shadow-sm font-mono text-xs">
-            <div className="p-2 rounded bg-[#111111] text-zinc-400 mt-0.5 border border-zinc-800">
-              <Sparkles className="w-4 h-4 text-[#B7E36A]" />
+          <div className="p-4 rounded-lg bg-surface border border-border flex items-start gap-3.5 shadow-sm font-mono text-xs">
+            <div className="p-2 rounded bg-surface-elevated text-foreground-secondary mt-0.5 border border-border">
+              <Sparkles className="w-4 h-4 text-lime" />
             </div>
-            <div className="flex-1 leading-relaxed text-zinc-300 font-sans">
-              <span className="font-bold text-zinc-100 block mb-1 font-mono uppercase tracking-wider text-[11px]">
+            <div className="flex-1 leading-relaxed text-foreground-secondary font-sans">
+              <span className="font-bold text-foreground block mb-1 font-mono uppercase tracking-wider text-[11px]">
                 Executive Threat Briefing
               </span>
               {scanResult.executive_summary}
@@ -579,9 +585,9 @@ export default function ReconPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#050505] flex items-center justify-center font-mono text-xs text-zinc-400">
+        <div className="min-h-screen bg-background flex items-center justify-center font-mono text-xs text-foreground-muted">
           <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 border-2 border-[#B7E36A] border-t-transparent rounded-full animate-spin" />
+            <span className="w-3.5 h-3.5 border-2 border-lime border-t-transparent rounded-full animate-spin" />
             <span>Loading ReconFlow Workspace...</span>
           </div>
         </div>

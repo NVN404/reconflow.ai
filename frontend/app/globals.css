@@ -3,8 +3,33 @@
 @tailwind utilities;
 
 :root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --foreground-secondary: #475569;
+  --foreground-muted: #64748b;
+  --surface: #ffffff;
+  --surface-elevated: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --surface-card: #ffffff;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --brand-lime: #4d7c0f;
+  --brand-lime-bg: rgba(77, 124, 15, 0.12);
+}
+
+html.dark {
   --background: #050505;
   --foreground: #F7F7F5;
+  --foreground-secondary: #A0A09C;
+  --foreground-muted: #6F6F6B;
+  --surface: #080808;
+  --surface-elevated: #0B0B0B;
+  --surface-hover: #111111;
+  --surface-card: #0B0B0B;
+  --border: #292929;
+  --border-strong: #383838;
+  --brand-lime: #B7E36A;
+  --brand-lime-bg: rgba(183, 227, 106, 0.15);
 }
 
 body {
@@ -12,33 +37,334 @@ body {
   background: var(--background);
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   overflow-x: hidden;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* ==========================================================================
+   LIGHT MODE DESIGN SYSTEM OVERRIDES (Active when .dark class is removed)
+   ========================================================================== */
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Base Surfaces & Backgrounds */
+html:not(.dark) .bg-\[\#050505\] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-\[\#050505\]\/90 {
+  background-color: rgba(248, 250, 252, 0.92) !important;
+}
+
+html:not(.dark) .bg-\[\#050505\]\/40 {
+  background-color: rgba(248, 250, 252, 0.4) !important;
+}
+
+html:not(.dark) .bg-\[\#080808\],
+html:not(.dark) .bg-\[\#0A0A0A\],
+html:not(.dark) .bg-\[\#0B0B0B\] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-\[\#0A0A0A\]\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html:not(.dark) .bg-\[\#0C0C0C\],
+html:not(.dark) .bg-\[\#0F0F0F\] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-\[\#111111\],
+html:not(.dark) .bg-\[\#121212\],
+html:not(.dark) .bg-\[\#141414\] {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#111111\]:hover,
+html:not(.dark) .hover\:bg-\[\#121212\]:hover,
+html:not(.dark) .hover\:bg-\[\#181818\]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .bg-\[\#181818\],
+html:not(.dark) .bg-\[\#202020\] {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .bg-zinc-900 {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .hover\:bg-zinc-800\/50:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Borders & Separators */
+html:not(.dark) .border-\[\#292929\],
+html:not(.dark) .border-\[\#383838\],
+html:not(.dark) .border-zinc-800,
+html:not(.dark) .border-zinc-800\/80,
+html:not(.dark) .border-zinc-800\/70,
+html:not(.dark) .border-zinc-800\/60,
+html:not(.dark) .border-zinc-700 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .hover\:border-zinc-700:hover,
+html:not(.dark) .hover\:border-\[\#383838\]:hover {
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .bg-zinc-800 {
+  background-color: #cbd5e1 !important;
+}
+
+/* Typography Overrides */
+html:not(.dark) .text-\[\#F7F7F5\],
+html:not(.dark) .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-zinc-200 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-zinc-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-zinc-400 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-zinc-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .text-zinc-600 {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .placeholder-zinc-500::placeholder,
+html:not(.dark) .placeholder\:text-zinc-600::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Lime Brand Signal (Contrast Adjusted for Light Backgrounds) */
+html:not(.dark) .text-\[\#B7E36A\] {
+  color: #3f6212 !important;
+}
+
+html:not(.dark) .bg-\[\#B7E36A\] {
+  background-color: #4d7c0f !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#a5cf5c\]:hover {
+  background-color: #3f6212 !important;
+}
+
+html:not(.dark) .bg-\[\#B7E36A\]\/10,
+html:not(.dark) .bg-\[\#B7E36A\]\/20 {
+  background-color: rgba(77, 124, 15, 0.1) !important;
+  color: #3f6212 !important;
+}
+
+html:not(.dark) .border-\[\#B7E36A\]\/30,
+html:not(.dark) .border-\[\#B7E36A\]\/50,
+html:not(.dark) .border-\[\#B7E36A\]\/60 {
+  border-color: rgba(77, 124, 15, 0.3) !important;
+}
+
+/* Primary Action Buttons (Dark Contrast Pill in Light Mode) */
+html:not(.dark) button.bg-zinc-100,
+html:not(.dark) a.bg-zinc-100 {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) button.bg-zinc-100:hover,
+html:not(.dark) a.bg-zinc-100:hover {
+  background-color: #1e293b !important;
+}
+
+html:not(.dark) button.bg-zinc-100 svg,
+html:not(.dark) a.bg-zinc-100 svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Risk & Severity Badges in Light Mode */
+html:not(.dark) .bg-rose-950,
+html:not(.dark) .bg-rose-950\/40,
+html:not(.dark) .bg-rose-950\/50,
+html:not(.dark) .bg-rose-950\/80 {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+}
+html:not(.dark) .text-rose-400,
+html:not(.dark) .text-rose-300 {
+  color: #be123c !important;
+}
+
+html:not(.dark) .bg-orange-950,
+html:not(.dark) .bg-orange-950\/40,
+html:not(.dark) .bg-orange-950\/50,
+html:not(.dark) .bg-orange-950\/80 {
+  background-color: #fff7ed !important;
+  border-color: #fed7aa !important;
+}
+html:not(.dark) .text-orange-400,
+html:not(.dark) .text-orange-300 {
+  color: #c2410c !important;
+}
+
+html:not(.dark) .bg-amber-950,
+html:not(.dark) .bg-amber-950\/20,
+html:not(.dark) .bg-amber-950\/30,
+html:not(.dark) .bg-amber-950\/40,
+html:not(.dark) .bg-amber-950\/80 {
+  background-color: #fefce8 !important;
+  border-color: #fef08a !important;
+}
+html:not(.dark) .text-amber-400,
+html:not(.dark) .text-amber-300 {
+  color: #a16207 !important;
+}
+
+html:not(.dark) .bg-emerald-950,
+html:not(.dark) .bg-emerald-950\/20,
+html:not(.dark) .bg-emerald-950\/40,
+html:not(.dark) .bg-emerald-950\/80,
+html:not(.dark) .bg-\[\#0B150B\] {
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+html:not(.dark) .text-emerald-400,
+html:not(.dark) .text-emerald-300 {
+  color: #15803d !important;
+}
+
+html:not(.dark) .bg-purple-950,
+html:not(.dark) .bg-purple-950\/20,
+html:not(.dark) .bg-purple-950\/40,
+html:not(.dark) .bg-purple-950\/80,
+html:not(.dark) .bg-\[\#140b24\]\/90 {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+}
+html:not(.dark) .text-purple-400,
+html:not(.dark) .text-purple-300,
+html:not(.dark) .text-purple-200 {
+  color: #7e22ce !important;
+}
+
+/* Light Mode Input Elements */
+html:not(.dark) input[type="text"],
+html:not(.dark) input[type="email"],
+html:not(.dark) input[type="search"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+html:not(.dark) input[type="text"]:focus,
+html:not(.dark) input[type="email"]:focus,
+html:not(.dark) input[type="search"]:focus {
+  border-color: #4d7c0f !important;
+  ring-color: #4d7c0f !important;
+}
+
+/* React Flow Canvas (Light Mode) */
+html:not(.dark) .react-flow__background {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .react-flow__controls {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .react-flow__controls-button {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  fill: #64748b !important;
+}
+
+html:not(.dark) .react-flow__controls-button:hover {
+  background-color: #f8fafc !important;
+  fill: #4d7c0f !important;
+}
+
+html:not(.dark) .react-flow__minimap {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .react-flow__edge-path {
+  stroke: #94a3b8 !important;
+}
+
+/* Light Mode Gradients */
+html:not(.dark) .from-\[\#050505\] {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(248, 250, 252, 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+html:not(.dark) .to-\[\#050505\] {
+  --tw-gradient-to: #f8fafc var(--tw-gradient-to-position) !important;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 
-::-webkit-scrollbar-track {
+html.dark ::-webkit-scrollbar-track {
   background: #080808;
 }
 
-::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #292929;
   border-radius: 2px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #383838;
 }
 
-/* React Flow Custom Theme Styling */
-.react-flow__background {
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* React Flow Dark Theme Defaults */
+html.dark .react-flow__background {
   background-color: #050505 !important;
 }
 
-.react-flow__controls {
+html.dark .react-flow__controls {
   background-color: #0B0B0B !important;
   border: 1px solid #292929 !important;
   border-radius: 8px !important;
@@ -46,19 +372,19 @@ body {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
 }
 
-.react-flow__controls-button {
+html.dark .react-flow__controls-button {
   background-color: #0B0B0B !important;
   border-bottom: 1px solid #1C1C1C !important;
   fill: #6F6F6B !important;
   transition: all 150ms ease !important;
 }
 
-.react-flow__controls-button:hover {
+html.dark .react-flow__controls-button:hover {
   background-color: #111111 !important;
   fill: #B7E36A !important;
 }
 
-.react-flow__minimap {
+html.dark .react-flow__minimap {
   background-color: #080808 !important;
   border: 1px solid #292929 !important;
   border-radius: 8px !important;
