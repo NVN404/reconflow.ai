@@ -25,8 +25,6 @@ services:
         sync: false
       - key: STYTCH_SECRET
         sync: false
-      - key: RESEND_API_KEY
-        sync: false
 
   # -------------------------------------------------------------
   # ReconFlow AI - Frontend Web App (Next.js 14 + React Flow)
