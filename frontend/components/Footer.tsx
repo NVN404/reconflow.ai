@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-8 text-foreground-secondary">
           <a href="#problem" className="hover:text-foreground transition-colors">The Problem</a>
-          <a href="#graph-section" className="hover:text-foreground transition-colors">Attack Surface Graph</a>
+          <a href="/recon" className="hover:text-foreground transition-colors">Attack Surface Graph</a>
           <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
           <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
         </div>

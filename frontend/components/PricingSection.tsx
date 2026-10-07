@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -10,6 +11,7 @@ interface PricingSectionProps {
 }
 
 export const PricingSection: React.FC<PricingSectionProps> = ({ onUpgradeClick, isProMember }) => {
+  const router = useRouter();
   const [isAnnual, setIsAnnual] = useState(false);
 
   const plans = [
@@ -165,8 +167,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onUpgradeClick, 
                     if (plan.name === "Professional") {
                       onUpgradeClick?.(plan.name, isAnnual ? plan.priceAnnual : plan.priceMonthly);
                     } else if (plan.name === "Community") {
-                      const el = document.getElementById("graph-section");
-                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                      router.push("/recon");
                     } else {
                       alert("Contact enterprise sales at security@reconflow.render.com");
                     }

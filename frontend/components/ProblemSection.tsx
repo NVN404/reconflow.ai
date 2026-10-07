@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, ArrowRight, Play, Sparkles } from "lucide-react";
 
@@ -22,6 +23,7 @@ interface FragmentTelemetry {
 }
 
 export const ProblemSection: React.FC = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(true);
 
@@ -120,11 +122,8 @@ export const ProblemSection: React.FC = () => {
     setIsAutoPlaying(false);
   };
 
-  const scrollToGraph = () => {
-    const el = document.getElementById("graph-section");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const navigateToRecon = () => {
+    router.push("/recon");
   };
 
   return (
@@ -315,7 +314,7 @@ export const ProblemSection: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={scrollToGraph}
+                  onClick={navigateToRecon}
                   className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground hover:opacity-90 bg-surface-elevated hover:bg-surface border border-border px-3 py-1.5 rounded transition-all cursor-pointer shadow-sm"
                 >
                   <span>Explore In Attack Graph</span>
