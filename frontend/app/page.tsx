@@ -19,8 +19,9 @@ export default function Home() {
   const [isProMember, setIsProMember] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState({
-    name: "Professional Plan",
-    price: "$49 / month",
+    name: "Developer Plan",
+    price: "$99 / month",
+    amountCents: 9900,
   });
 
   useEffect(() => {
@@ -29,13 +30,13 @@ export default function Home() {
     }
   }, []);
 
-  const handleStartRecon = (target: string = "reconflow.render.com") => {
-    const clean = target.trim() || "reconflow.render.com";
+  const handleStartRecon = (target: string = "vulnweb.com") => {
+    const clean = target.trim() || "vulnweb.com";
     router.push(`/recon?target=${encodeURIComponent(clean)}`);
   };
 
-  const handleUpgradeClick = (planName: string, price: string) => {
-    setSelectedPlan({ name: planName, price });
+  const handleUpgradeClick = (planName: string, price: string, amountCents: number = 9900) => {
+    setSelectedPlan({ name: planName, price, amountCents });
     setIsPaymentModalOpen(true);
   };
 
@@ -49,7 +50,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-lime/20 selection:text-lime transition-colors duration-200">
       {/* Top Navbar */}
-      <Navbar onStartReconClick={() => handleStartRecon("reconflow.render.com")} />
+      <Navbar onStartReconClick={() => handleStartRecon("vulnweb.com")} />
 
       {/* Hero Section with Three.js Particle Wave */}
       <HeroSection onScanTarget={handleStartRecon} isScanning={false} />
@@ -82,6 +83,7 @@ export default function Home() {
         onPaymentSuccess={handlePaymentSuccess}
         planName={selectedPlan.name}
         price={selectedPlan.price}
+        amountCents={selectedPlan.amountCents}
       />
     </div>
   );

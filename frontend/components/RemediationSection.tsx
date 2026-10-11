@@ -8,7 +8,7 @@ export const RemediationSection: React.FC = () => {
 
   const sampleFinding = {
     title: "Exposed Environment Configuration File",
-    target: "https://staging.reconflow.render.com/.env",
+    target: "https://staging.vulnweb.com/.env",
     severity: "CRITICAL",
 
     cvss: "9.1",

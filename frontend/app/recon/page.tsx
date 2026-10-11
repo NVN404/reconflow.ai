@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   X,
   AlertCircle,
+  Network,
+  Bot,
 } from "lucide-react";
 
 import { SearchBar } from "@/components/SearchBar";
@@ -24,6 +26,8 @@ import { ThoughtStream } from "@/components/ThoughtStream";
 import { CorporateAuthModal } from "@/components/CorporateAuthModal";
 import { PaymentModal } from "@/components/PaymentModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MCPChatPanel, ChatMessage } from "@/components/MCPChatPanel";
+import { MCPFindingsSidebar } from "@/components/MCPFindingsSidebar";
 
 import { getLayoutedElements } from "@/lib/layout";
 import { ScanResult, GraphNode, AgentThought } from "@/lib/types";
@@ -44,7 +48,7 @@ const initialScanResult: ScanResult = {
     generated_at: "2026-10-05T00:00:00Z",
   },
   executive_summary:
-    "ReconFlow AI Standing By. Enter any target perimeter (e.g. reconflow.render.com) to initiate autonomous external reconnaissance.",
+    "ReconFlow AI Standing By. Enter any target perimeter (e.g. vulnweb.com) to initiate autonomous external reconnaissance.",
   nodes: [],
   edges: [],
   thoughts: [],
@@ -60,13 +64,23 @@ function ReconWorkspaceContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialTarget = searchParams.get("target") || "reconflow.render.com";
+  const initialTarget = searchParams.get("target") || "vulnweb.com";
 
   const [scanResult, setScanResult] = useState<ScanResult>(initialScanResult);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [layoutDirection, setLayoutDirection] = useState<"TB" | "LR">("TB");
   const [isScanning, setIsScanning] = useState<boolean>(false);
+
+  // Recon Protocol & Workspace View State
+  // selectedProtocol: staged in SearchBar, controls active workspace mode directly
+  const [selectedProtocol, setSelectedProtocol] = useState<"rest" | "mcp" | "both">("rest");
+  // executedProtocol: protocol of the actual scan results currently active in memory
+  const [executedProtocol, setExecutedProtocol] = useState<"rest" | "mcp" | "both" | null>(null);
+  // displayMode: mirrors selectedProtocol so switching SearchBar buttons updates the workspace view immediately
+  const displayMode = selectedProtocol;
+  const [bothActiveView, setBothActiveView] = useState<"graph" | "chat">("graph");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   // Corporate Work Email Authentication State
   const [corporateSession, setCorporateSession] = useState<CorporateSession | null>(null);
@@ -77,12 +91,13 @@ function ReconWorkspaceContent() {
     enablePhase2: boolean;
     customDorks: string[];
     enabledVectors?: Record<string, boolean>;
-    protocol?: "rest" | "mcp";
+    protocol?: "rest" | "mcp" | "both";
   } | null>(null);
 
-  // Pricing / Scan Limits (1 Free Scan per Day for Hackathon demo)
+  // Pricing / Scan Limits (First Scan Free trial, paid plans unlock daily sweeps)
   const [scanCount, setScanCount] = useState<number>(0);
   const [isProMember, setIsProMember] = useState<boolean>(false);
+  const [activePlanName, setActivePlanName] = useState<string>("Developer Plan");
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
   const [stripeBanner, setStripeBanner] = useState<{
     type: "success" | "canceled";
@@ -109,28 +124,34 @@ function ReconWorkspaceContent() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedPro = localStorage.getItem("reconflow_pro") === "true";
+      const storedPlan = localStorage.getItem("reconflow_plan") || "Developer Plan";
       const storedCount = parseInt(localStorage.getItem("reconflow_scan_count") || "0", 10);
       setIsProMember(storedPro);
+      setActivePlanName(storedPlan);
       setScanCount(storedCount);
 
       // Handle Stripe Checkout Redirect Query Params
       const upgraded = searchParams.get("upgraded");
+      const upgradedPlan = searchParams.get("plan");
       const sessionId = searchParams.get("session_id");
       const canceled = searchParams.get("canceled");
       const upgradeReq = searchParams.get("upgrade");
 
       if (upgraded === "true") {
+        const planTitle = upgradedPlan ? decodeURIComponent(upgradedPlan) : "Developer Plan";
         setIsProMember(true);
+        setActivePlanName(planTitle);
         localStorage.setItem("reconflow_pro", "true");
+        localStorage.setItem("reconflow_plan", planTitle);
         setStripeBanner({
           type: "success",
-          message: "Official Stripe Test Checkout successful! Unlimited Multi-Engine Sweeps unlocked.",
+          message: `Official Stripe Checkout successful! ${planTitle} unlocked with daily multi-engine sweeps.`,
           sessionId: sessionId || undefined,
         });
       } else if (canceled === "true") {
         setStripeBanner({
           type: "canceled",
-          message: "Stripe checkout was canceled. You remain on the Community tier (1 free scan / day).",
+          message: "Stripe checkout was canceled. You remain on the Free Community tier (1st scan free trial).",
         });
       } else if (upgradeReq === "true") {
         setIsPaymentModalOpen(true);
@@ -180,22 +201,346 @@ function ReconWorkspaceContent() {
   }, [scanResult, activeFilter, layoutDirection]);
 
   // Actual API dispatch to backend
+  // ─── Build MCP chat messages from scan results ──────────────────────────
+  const buildChatMessagesFromScan = (data: ScanResult, domain: string) => {
+    const now = new Date().toLocaleTimeString("en-GB");
+    const messages: ChatMessage[] = [];
+
+    // 1. Scan initiation message
+    messages.push({
+      id: `scan-init-${Date.now()}`,
+      role: "agent",
+      content: `Deploying SerpApi MCP recon agents for target: ${domain}...`,
+      timestamp: now,
+      thoughts: data.thoughts?.slice(0, 5),
+    });
+
+    // 2. Executive summary + score card
+    messages.push({
+      id: `scan-summary-${Date.now()}`,
+      role: "agent",
+      content: data.executive_summary || `Scan complete for ${domain}. Here are the results:`,
+      timestamp: now,
+      scanSummary: {
+        target: data.summary.target,
+        securityScore: data.summary.security_score,
+        securityGrade: data.summary.security_grade,
+        criticalCount: data.summary.critical_risks,
+        highCount: data.summary.high_risks,
+        mediumCount: data.summary.medium_risks,
+        lowCount: data.summary.low_risks,
+        infoCount: data.summary.info,
+      },
+    });
+
+    // 3. Critical & High findings as expandable cards
+    const criticalFindings = data.nodes.filter(
+      (n) => n.data.severity === "CRITICAL" || n.data.severity === "HIGH"
+    );
+    if (criticalFindings.length > 0) {
+      messages.push({
+        id: `scan-critical-${Date.now()}`,
+        role: "agent",
+        content: `🚨 Found ${criticalFindings.length} critical/high severity finding${criticalFindings.length > 1 ? "s" : ""} that require immediate attention:`,
+        timestamp: now,
+        findings: criticalFindings,
+      });
+    }
+
+    // 4. Medium findings
+    const mediumFindings = data.nodes.filter((n) => n.data.severity === "MEDIUM");
+    if (mediumFindings.length > 0) {
+      messages.push({
+        id: `scan-medium-${Date.now()}`,
+        role: "agent",
+        content: `⚠️ ${mediumFindings.length} medium severity finding${mediumFindings.length > 1 ? "s" : ""} detected:`,
+        timestamp: now,
+        findings: mediumFindings,
+      });
+    }
+
+    // 5. Clean / Info summary
+    const cleanFindings = data.nodes.filter(
+      (n) => n.data.category === "VULN_STATUS_CLEAN" || n.data.severity === "INFO" || n.data.severity === "LOW"
+    );
+    if (cleanFindings.length > 0) {
+      messages.push({
+        id: `scan-info-${Date.now()}`,
+        role: "agent",
+        content: `✅ ${cleanFindings.length} info/clean perimeter asset${cleanFindings.length > 1 ? "s" : ""} identified. These are low/no risk but documented for completeness.`,
+        timestamp: now,
+        findings: cleanFindings.slice(0, 6), // Limit to 6 to avoid clutter
+      });
+    }
+
+    // 6. Closing prompt
+    messages.push({
+      id: `scan-close-${Date.now()}`,
+      role: "agent",
+      content: `Scan complete. You can ask me to explain any finding in detail, suggest remediation steps, or analyze attack vectors. Click "Ask AI →" on any finding card above, or type your question below.`,
+      timestamp: now,
+    });
+
+    return messages;
+  };
+
+  // ─── Handle user chat follow-up messages via Autonomous MCP Agent ──────
+  const handleChatMessage = async (message: string) => {
+    const now = new Date().toLocaleTimeString("en-GB");
+
+    // Add user message immediately
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: message,
+      timestamp: now,
+    };
+
+    // Pending agent message with dynamic thinking indicator
+    const pendingId = `agent-pending-${Date.now()}`;
+    const pendingMsg: ChatMessage = {
+      id: pendingId,
+      role: "agent",
+      content: "Autonomous MCP Agent analyzing intent & formulating SerpApi MCP tool query...",
+      timestamp: now,
+      isStreaming: true,
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, pendingMsg]);
+
+    const target = scanResult?.summary?.target || initialTarget || "vulnweb.com";
+
+    try {
+      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+      const chatEndpoint = cleanApiUrl ? `${cleanApiUrl}/api/mcp/chat` : "/api/mcp/chat";
+
+      const res = await fetch(chatEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          domain: target,
+          message,
+          existing_nodes: scanResult?.nodes || [],
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`MCP Chat returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      const newAgentMsg: ChatMessage = {
+        id: `agent-${Date.now()}`,
+        role: "agent",
+        content: data.reply || "Recon investigation complete.",
+        timestamp: new Date().toLocaleTimeString("en-GB"),
+        findings: data.findings && data.findings.length > 0 ? data.findings : undefined,
+        tool_call: data.tool_call || undefined,
+        mcpResultsCount: data.mcp_results_count,
+        thoughts: data.thought
+          ? [
+              {
+                timestamp: new Date().toLocaleTimeString("en-GB"),
+                stage: data.tool_call ? "MCP_TOOL_EXEC" : "MCP_REASONING",
+                message: data.thought,
+                status: data.tool_call ? "success" : "info",
+              },
+            ]
+          : undefined,
+      };
+
+      // Replace pending message with completed agent response
+      setChatMessages((prev) =>
+        prev.map((m) => (m.id === pendingId ? newAgentMsg : m))
+      );
+
+      // If new findings discovered by the live tool call, integrate them into workspace scanResult
+      if (data.findings && data.findings.length > 0) {
+        setScanResult((prev) => {
+          const existingIds = new Set(prev.nodes.map((n) => n.id));
+          const uniqueNewNodes = data.findings.filter((n: GraphNode) => !existingIds.has(n.id));
+          if (uniqueNewNodes.length === 0) return prev;
+
+          return {
+            ...prev,
+            nodes: [...prev.nodes, ...uniqueNewNodes],
+            summary: {
+              ...prev.summary,
+              total_nodes: (prev.summary.total_nodes || 0) + uniqueNewNodes.length,
+            },
+          };
+        });
+      }
+    } catch (err: any) {
+      console.warn("MCP Agent backend call failed, falling back to local context:", err);
+      // Fallback gracefully to local context generator if offline
+      const aiResponse = generateChatResponse(message, scanResult);
+      const fallbackMsg: ChatMessage = {
+        id: `agent-${Date.now()}`,
+        role: "agent",
+        content: aiResponse.text,
+        timestamp: new Date().toLocaleTimeString("en-GB"),
+        findings: aiResponse.relevantFindings,
+      };
+      setChatMessages((prev) =>
+        prev.map((m) => (m.id === pendingId ? fallbackMsg : m))
+      );
+    }
+  };
+
+  // ─── AI response generator (local, from scan context) ───────────────────
+  const generateChatResponse = (
+    query: string,
+    result: ScanResult
+  ): { text: string; relevantFindings?: GraphNode[] } => {
+    const q = query.toLowerCase();
+    const nodes = result?.nodes || [];
+
+    // Finding-specific queries
+    const matchedFindings = nodes.filter((n) => {
+      const label = n.data.label?.toLowerCase() || "";
+      const category = n.data.category?.toLowerCase() || "";
+      const surface = n.data.surface?.toLowerCase() || "";
+      return (
+        q.includes(label.slice(0, 20)) ||
+        (q.includes("s3") && (category.includes("s3") || label.includes("s3"))) ||
+        (q.includes("github") && (category.includes("github") || label.includes("github"))) ||
+        (q.includes("bucket") && (category.includes("s3") || label.includes("bucket"))) ||
+        (q.includes("token") && (category.includes("token") || label.includes("token"))) ||
+        (q.includes("api") && (category.includes("api") || label.includes("api"))) ||
+        (q.includes("youtube") && category.includes("youtube")) ||
+        (q.includes("news") && category.includes("news")) ||
+        (q.includes("mobile") && category.includes("mobile")) ||
+        (q.includes("header") && (category.includes("header") || label.includes("header"))) ||
+        (q.includes("dns") && (category.includes("dns") || label.includes("dns"))) ||
+        (q.includes("email") && (category.includes("email") || label.includes("email")))
+      );
+    });
+
+    if (matchedFindings.length > 0) {
+      const f = matchedFindings[0].data;
+      const parts: string[] = [];
+      parts.push(`Here's what I know about "${f.label}":\n`);
+      if (f.what_is_the_bug) parts.push(`🔍 **Detection:** ${f.what_is_the_bug}`);
+      if (f.why_it_is_a_bug) parts.push(`⚠️ **Risk:** ${f.why_it_is_a_bug}`);
+      if (f.attack_vector) parts.push(`🎯 **Attack Vector:** ${f.attack_vector}`);
+      if (f.how_to_fix || f.remediation) parts.push(`🛡️ **Remediation:** ${f.how_to_fix || f.remediation}`);
+      if (f.remediation_steps && f.remediation_steps.length > 0) {
+        parts.push(`\n📋 **Action Steps:**\n${f.remediation_steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`);
+      }
+      if (f.owasp_tag) parts.push(`\n📌 Standard: ${f.owasp_tag}${f.cwe_id ? ` | ${f.cwe_id}` : ""}${f.cvss_score ? ` | CVSS ${f.cvss_score}` : ""}`);
+      return { text: parts.join("\n\n"), relevantFindings: matchedFindings };
+    }
+
+    // Summary queries
+    if (q.includes("critical") || q.includes("summarize")) {
+      const criticals = nodes.filter((n) => n.data.severity === "CRITICAL");
+      if (criticals.length === 0) {
+        return { text: "No critical severity findings were detected in this scan. The perimeter looks relatively secure at the critical level." };
+      }
+      const summary = criticals.map((n) => `• **${n.data.label}** — ${n.data.what_is_the_bug || n.data.metadata?.snippet || "Detected"}`).join("\n");
+      return {
+        text: `Found ${criticals.length} critical finding${criticals.length > 1 ? "s" : ""}:\n\n${summary}\n\nClick on any finding card to see full details, or ask me about a specific one.`,
+        relevantFindings: criticals,
+      };
+    }
+
+    if (q.includes("fix") || q.includes("remediat") || q.includes("patch")) {
+      const vulns = nodes.filter((n) => n.data.severity === "CRITICAL" || n.data.severity === "HIGH");
+      if (vulns.length === 0) {
+        return { text: "No critical or high severity vulnerabilities found that need immediate remediation." };
+      }
+      const topVuln = vulns[0].data;
+      const steps = topVuln.remediation_steps?.map((s, i) => `${i + 1}. ${s}`).join("\n") || "No specific steps available.";
+      return {
+        text: `Top priority fix — **${topVuln.label}** (${topVuln.severity}):\n\n🛡️ ${topVuln.how_to_fix || topVuln.remediation || "Apply security hardening."}\n\n📋 Steps:\n${steps}`,
+        relevantFindings: [vulns[0]],
+      };
+    }
+
+    if (q.includes("attack") || q.includes("vector") || q.includes("exploit")) {
+      const withVectors = nodes.filter((n) => n.data.attack_vector);
+      if (withVectors.length === 0) {
+        return { text: "No documented attack vectors found in this scan's findings." };
+      }
+      const vectors = withVectors.slice(0, 3).map((n) => `• **${n.data.label}:** ${n.data.attack_vector}`).join("\n\n");
+      return {
+        text: `Known attack vectors from this scan:\n\n${vectors}`,
+        relevantFindings: withVectors.slice(0, 3),
+      };
+    }
+
+    if (q.includes("high")) {
+      const highs = nodes.filter((n) => n.data.severity === "HIGH");
+      return {
+        text: highs.length > 0
+          ? `Found ${highs.length} high severity finding${highs.length > 1 ? "s" : ""}. Expand the cards below for details:`
+          : "No high severity findings detected.",
+        relevantFindings: highs.length > 0 ? highs : undefined,
+      };
+    }
+
+    if (q.includes("medium")) {
+      const meds = nodes.filter((n) => n.data.severity === "MEDIUM");
+      return {
+        text: meds.length > 0
+          ? `Found ${meds.length} medium severity finding${meds.length > 1 ? "s" : ""}:`
+          : "No medium severity findings detected.",
+        relevantFindings: meds.length > 0 ? meds : undefined,
+      };
+    }
+
+    if (q.includes("low") || q.includes("info") || q.includes("clean") || q.includes("asset")) {
+      const infos = nodes.filter((n) => n.data.severity === "LOW" || n.data.severity === "INFO" || n.data.category === "VULN_STATUS_CLEAN");
+      return {
+        text: infos.length > 0
+          ? `${infos.length} low/info-level assets found across the perimeter:`
+          : "No info-level assets in this scan.",
+        relevantFindings: infos.length > 0 ? infos.slice(0, 6) : undefined,
+      };
+    }
+
+    // Default fallback
+    const totalVulns = result.summary.critical_risks + result.summary.high_risks + result.summary.medium_risks;
+    return {
+      text: `Based on the scan of **${result.summary.target}**, I found ${totalVulns} vulnerabilities (${result.summary.critical_risks} critical, ${result.summary.high_risks} high, ${result.summary.medium_risks} medium) across ${result.summary.total_nodes} nodes.\n\nSecurity Score: **${result.summary.security_score}/100** (Grade ${result.summary.security_grade}).\n\nYou can ask me about specific findings, request remediation advice, or explore attack vectors. Try:\n• "Summarize all critical findings"
+• "How do I fix the top vulnerability?"
+• "What attack vectors exist?"`,
+    };
+  };
+
   const executeScanRequest = async (
     domain: string,
     enablePhase2: boolean = true,
     customDorks: string[] = [],
     enabledVectors?: Record<string, boolean>,
-    protocol: "rest" | "mcp" = "rest"
+    protocol: "rest" | "mcp" | "both" = "rest"
   ) => {
     setIsScanning(true);
     setSelectedNode(null);
+    setExecutedProtocol(protocol);
+
+    // If MCP or Both, add an initial chat message; if REST, clear previous chat messages
+    if (protocol === "mcp" || protocol === "both") {
+      setChatMessages([{
+        id: `system-init-${Date.now()}`,
+        role: "system",
+        content: `Initializing ${protocol === "both" ? "Dual Engine (REST + SerpApi MCP)" : "SerpApi MCP"} Protocol scan for ${domain}...`,
+        timestamp: new Date().toLocaleTimeString("en-GB"),
+      }]);
+    } else {
+      setChatMessages([]);
+    }
 
     const startTime = new Date().toLocaleTimeString("en-GB");
+    const protoLabel = protocol === "both" ? "Dual Engine (REST + MCP)" : protocol === "mcp" ? "SerpApi MCP Protocol" : "Direct REST";
     setThoughts([
       {
         timestamp: startTime,
         stage: "DISPATCH",
-        message: `Deploying live SerpApi multi-engine recon agent for target: ${domain} via ${protocol === "mcp" ? "SerpApi MCP Protocol" : "Direct REST"}...`,
+        message: `Deploying live SerpApi multi-engine recon agent for target: ${domain} via ${protoLabel}...`,
         status: "info",
       },
     ]);
@@ -226,6 +571,14 @@ function ReconWorkspaceContent() {
           setThoughts(data.thoughts);
         }
 
+        // If MCP or Both protocol, build chat messages from scan results; otherwise keep chat clean
+        if (protocol === "mcp" || protocol === "both") {
+          const chatMsgs = buildChatMessagesFromScan(data, domain);
+          setChatMessages(chatMsgs);
+        } else {
+          setChatMessages([]);
+        }
+
         // Track scan usage
         const newCount = scanCount + 1;
         setScanCount(newCount);
@@ -237,16 +590,29 @@ function ReconWorkspaceContent() {
       }
     } catch (err: any) {
       console.error("Live scan failed:", err);
+      const errorMsg = `Scan error: ${err?.message || "Failed to reach backend"}. Please check your backend URL configuration.`;
       setThoughts((prev) => [
         ...prev,
         {
           timestamp: new Date().toLocaleTimeString("en-GB"),
           stage: "ERROR",
-          message: `Scan error: ${err?.message || "Failed to reach backend"}. Please check your backend URL configuration.`,
+          message: errorMsg,
           status: "critical",
         },
       ]);
 
+      // If MCP or Both, add error to chat
+      if (protocol === "mcp" || protocol === "both") {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `error-${Date.now()}`,
+            role: "agent",
+            content: `❌ ${errorMsg}`,
+            timestamp: new Date().toLocaleTimeString("en-GB"),
+          },
+        ]);
+      }
     } finally {
       setIsScanning(false);
     }
@@ -258,7 +624,7 @@ function ReconWorkspaceContent() {
     enablePhase2: boolean = true,
     customDorks: string[] = [],
     enabledVectors?: Record<string, boolean>,
-    protocol: "rest" | "mcp" = "rest"
+    protocol: "rest" | "mcp" | "both" = "rest"
   ) => {
     const cleanTarget = domain
       .toLowerCase()
@@ -266,13 +632,8 @@ function ReconWorkspaceContent() {
       .replace(/\/.*$/, "")
       .replace(/^www\./, "");
 
-    // 1. Scan Limit Check (1 Free Scan per Day on Community plan, demo testbed exempt)
-    if (
-      scanCount >= 1 &&
-      !isProMember &&
-      cleanTarget !== "vulnweb.com" &&
-      cleanTarget !== "reconflow.render.com"
-    ) {
+    // 1. Strict Scan Limit Check (1 Free Scan per Day on Community plan)
+    if (scanCount >= 1 && !isProMember) {
       setIsPaymentModalOpen(true);
       return;
     }
@@ -285,9 +646,9 @@ function ReconWorkspaceContent() {
         corporateSession.email.endsWith(`.${cleanTarget}`));
 
     if (!isAuthorized) {
-      setAuthTargetDomain(cleanTarget || "reconflow.render.com");
+      setAuthTargetDomain(cleanTarget || "vulnweb.com");
       setPendingScan({
-        domain: cleanTarget || "reconflow.render.com",
+        domain: cleanTarget || "vulnweb.com",
         enablePhase2,
         customDorks,
         enabledVectors,
@@ -302,13 +663,17 @@ function ReconWorkspaceContent() {
 
   const handleCorporateVerified = (session: CorporateSession) => {
     setCorporateSession(session);
-    const targetToScan = session.domain || pendingScan?.domain || "reconflow.render.com";
+    if (scanCount >= 1 && !isProMember) {
+      setIsPaymentModalOpen(true);
+      return;
+    }
+    const targetToScan = session.domain || pendingScan?.domain || "vulnweb.com";
     executeScanRequest(
       targetToScan,
       pendingScan?.enablePhase2 ?? true,
       pendingScan?.customDorks ?? [],
       pendingScan?.enabledVectors,
-      pendingScan?.protocol || "rest"
+      pendingScan?.protocol || selectedProtocol
     );
     setPendingScan(null);
   };
@@ -325,7 +690,7 @@ function ReconWorkspaceContent() {
         pendingScan.enablePhase2,
         pendingScan.customDorks,
         pendingScan.enabledVectors,
-        pendingScan.protocol || "rest"
+        pendingScan.protocol || selectedProtocol
       );
       setPendingScan(null);
     }
@@ -377,14 +742,14 @@ function ReconWorkspaceContent() {
             {isProMember ? (
               <span className="flex items-center gap-1 px-2.5 py-1 rounded bg-lime/15 border border-lime/30 text-lime text-[10px] font-bold">
                 <Zap className="w-3 h-3 fill-lime" />
-                <span>PRO ACTIVE</span>
+                <span>{activePlanName.toUpperCase().replace(" PLAN", "")} ACTIVE</span>
               </span>
             ) : (
               <button
                 onClick={() => setIsPaymentModalOpen(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/15 dark:bg-amber-950/40 border border-amber-500/30 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-[10px] font-bold hover:bg-amber-500/25 transition-all cursor-pointer"
               >
-                <span>{scanCount >= 1 ? "Daily Limit Reached (1/1)" : "Free Scan Available (0/1)"}</span>
+                <span>{scanCount >= 1 ? "1st Scan Used (1/1)" : "1st Scan Free (0/1)"}</span>
                 <span className="text-lime underline">Upgrade</span>
               </button>
             )}
@@ -515,7 +880,16 @@ function ReconWorkspaceContent() {
         )}
 
         {/* Search Bar & Controls */}
-        <SearchBar onScan={handleScan} isScanning={isScanning} />
+        <SearchBar
+          onScan={handleScan}
+          isScanning={isScanning}
+          protocol={selectedProtocol}
+          onProtocolChange={(p) => {
+            setSelectedProtocol(p);
+          }}
+          isLimitReached={scanCount >= 1 && !isProMember}
+          onUpgradeClick={() => setIsPaymentModalOpen(true)}
+        />
 
         {/* Executive Threat Briefing Callout */}
         {scanResult?.executive_summary && (
@@ -532,8 +906,8 @@ function ReconWorkspaceContent() {
           </div>
         )}
 
-        {/* Metric Summary Cards */}
-        {scanResult?.summary && (
+        {/* Metric Summary Cards (Shown for REST and Both modes) */}
+        {displayMode !== "mcp" && scanResult?.summary && (
           <SummaryCards
             summary={scanResult.summary}
             activeFilter={activeFilter}
@@ -541,23 +915,175 @@ function ReconWorkspaceContent() {
           />
         )}
 
-        {/* React Flow Interactive Graph Canvas */}
-        <div className="relative">
-          <GraphCanvas
-            nodes={layoutedNodes}
-            edges={layoutedEdges}
-            onNodeClick={setSelectedNode}
-            selectedNodeId={selectedNode?.id}
-            layoutDirection={layoutDirection}
-            onToggleLayout={handleToggleLayout}
-          />
+        {/* Conditional Workspace Engine Views (Strict Mode Isolation) */}
+        {displayMode === "both" ? (
+          <>
+            {/* THIRD OPTION: RUN BOTH (DUAL HYBRID MODE) - Includes View Switcher */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-xl bg-surface border border-cyan-500/30 shadow-sm">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setBothActiveView("graph")}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer ${
+                    bothActiveView === "graph"
+                      ? "bg-surface-elevated text-foreground border border-border shadow-sm ring-1 ring-border"
+                      : "text-foreground-muted hover:text-foreground hover:bg-surface-elevated/50 border border-transparent"
+                  }`}
+                >
+                  <Network className="w-3.5 h-3.5 text-lime" />
+                  <span>Interactive Topology Graph</span>
+                  {scanResult?.nodes?.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-foreground-muted">
+                      {scanResult.nodes.length} nodes
+                    </span>
+                  )}
+                </button>
 
-          {/* Finding Detail Slide-Out Drawer */}
-          <FindingDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
-        </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBothActiveView("chat");
+                    if (chatMessages.length === 0 && scanResult?.nodes?.length > 0 && scanResult?.summary?.protocol_used === "both") {
+                      setChatMessages(buildChatMessagesFromScan(scanResult, scanResult.summary.target));
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer ${
+                    bothActiveView === "chat"
+                      ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/40 shadow-sm ring-1 ring-purple-500/30"
+                      : "text-foreground-muted hover:text-foreground hover:bg-surface-elevated/50 border border-transparent"
+                  }`}
+                >
+                  <Bot className="w-3.5 h-3.5 text-purple-500" />
+                  <span>SerpApi MCP AI Chat Digest</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">
+                    Chat Interface
+                  </span>
+                </button>
+              </div>
 
-        {/* Autonomous Agent Thought Stream */}
-        <ThoughtStream thoughts={thoughts} isScanning={isScanning} />
+              <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-700 dark:text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 rounded-lg">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-500 animate-spin" style={{ animationDuration: "6s" }} />
+                <span>
+                  {scanResult?.summary?.protocol_used === "both"
+                    ? "Dual Protocol Active · Both Graph & AI Chat Enabled (~2x Credits)"
+                    : "Dual Protocol Mode Selected · Both Graph & AI Chat Tabs Available"}
+                </span>
+              </div>
+            </div>
+
+            {/* Render Dual Mode Active Tab */}
+            {bothActiveView === "chat" ? (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <div className="lg:col-span-3">
+                  <MCPChatPanel
+                    messages={chatMessages}
+                    onSendMessage={handleChatMessage}
+                    isScanning={isScanning}
+                    scanResult={scanResult}
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <MCPFindingsSidebar
+                    summary={scanResult?.summary?.total_nodes > 0 ? scanResult.summary : null}
+                    onAskAbout={handleChatMessage}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <GraphCanvas
+                  nodes={layoutedNodes}
+                  edges={layoutedEdges}
+                  onNodeClick={setSelectedNode}
+                  selectedNodeId={selectedNode?.id}
+                  layoutDirection={layoutDirection}
+                  onToggleLayout={handleToggleLayout}
+                />
+                <FindingDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
+              </div>
+            )}
+          </>
+        ) : displayMode === "mcp" ? (
+          <>
+            {/* OPTION 2: SERPAPI MCP ONLY - AI CHAT DIGEST ONLY (No Graph, No Switcher) */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs font-mono text-purple-700 dark:text-purple-300">
+              <div className="flex items-center gap-2.5">
+                <Bot className="w-4 h-4 text-purple-500" />
+                <span className="font-bold">SerpApi MCP Server Mode Active</span>
+                <span className="hidden sm:inline text-[11px] text-foreground-muted">· Conversational AI Digest (-60% tokens)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedProtocol !== "mcp" && executedProtocol === "mcp" && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Staged: {selectedProtocol === "both" ? "Dual Mode" : "Direct REST"} (Click Execute to run)
+                  </span>
+                )}
+                <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 font-bold border border-purple-500/40">
+                  MCP Chat Only
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-3">
+                <MCPChatPanel
+                  messages={chatMessages}
+                  onSendMessage={handleChatMessage}
+                  isScanning={isScanning}
+                  scanResult={scanResult}
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <MCPFindingsSidebar
+                  summary={
+                    scanResult?.summary?.protocol_used === "mcp" && (scanResult?.summary?.total_nodes ?? 0) > 0
+                      ? scanResult.summary
+                      : null
+                  }
+                  onAskAbout={handleChatMessage}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* OPTION 1: DIRECT REST API ONLY - TOPOLOGY GRAPH CANVAS ONLY (No Chat, No Switcher) */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface border border-border text-xs font-mono text-foreground-secondary">
+              <div className="flex items-center gap-2.5">
+                <Network className="w-4 h-4 text-lime" />
+                <span className="font-bold text-foreground">Direct REST Mode Active</span>
+                <span className="hidden sm:inline text-[11px] text-foreground-muted">· Interactive Node Topology Canvas (Raw JSON)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedProtocol !== "rest" && executedProtocol === "rest" && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Staged: {selectedProtocol === "both" ? "Dual Mode" : "SerpApi MCP"} (Click Execute to run)
+                  </span>
+                )}
+                <span className="text-[10px] px-2 py-0.5 rounded bg-surface-elevated border border-border text-foreground-muted font-bold">
+                  REST Graph Only
+                </span>
+              </div>
+            </div>
+
+            <div className="relative">
+              <GraphCanvas
+                nodes={layoutedNodes}
+                edges={layoutedEdges}
+                onNodeClick={setSelectedNode}
+                selectedNodeId={selectedNode?.id}
+                layoutDirection={layoutDirection}
+                onToggleLayout={handleToggleLayout}
+              />
+              <FindingDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
+            </div>
+          </>
+        )}
+
+        {/* Autonomous Agent Thought Stream (Only for Direct REST and Both modes, NEVER for MCP mode) */}
+        {displayMode !== "mcp" && (
+          <ThoughtStream thoughts={thoughts} isScanning={isScanning} />
+        )}
       </main>
 
       {/* Corporate Work Email Authentication Modal Gate */}
@@ -573,8 +1099,9 @@ function ReconWorkspaceContent() {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onPaymentSuccess={handlePaymentSuccess}
-        planName="Professional Tier (Unlimited Sweeps)"
-        price="$49 / month"
+        planName={activePlanName || "Developer Plan"}
+        price="$99 / month"
+        amountCents={9900}
       />
 
     </div>

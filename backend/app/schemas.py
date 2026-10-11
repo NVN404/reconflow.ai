@@ -59,7 +59,7 @@ class ScanSummary(BaseModel):
     security_grade: str  # A, B, C, D, F
     serpapi_credits_used: int
     generated_at: str
-    protocol_used: str = "rest"  # "rest" | "mcp"
+    protocol_used: str = "rest"  # "rest" | "mcp" | "both"
 
 class AgentThought(BaseModel):
     timestamp: str
@@ -80,4 +80,4 @@ class ScanRequest(BaseModel):
     use_cache: bool = True
     custom_dorks: Optional[List[str]] = Field(default_factory=list)
     enabled_vectors: Optional[Dict[str, bool]] = Field(default_factory=dict)
-    protocol: Optional[str] = "rest"  # "rest" | "mcp"
+    protocol: Optional[str] = "rest"  # "rest" | "mcp" | "both"

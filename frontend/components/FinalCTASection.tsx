@@ -37,7 +37,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({ onScanTarget }
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="Enter target domain (e.g. reconflow.render.com)"
+            placeholder="Enter target domain (e.g. vulnweb.com)"
             className="flex-1 px-4 py-3 rounded-lg bg-surface-elevated border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-lime text-xs shadow-inner"
 
           />

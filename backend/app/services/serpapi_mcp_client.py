@@ -43,7 +43,7 @@ class SerpApiMCPClient:
         engine: str = "google_light",
         output_format: str = "json",
         mode: str = "compact",
-        timeout: int = 25
+        timeout: int = 7
     ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
         """
         Executes a search via the official SerpApi MCP 'search' tool.
@@ -56,6 +56,11 @@ class SerpApiMCPClient:
         mcp_engine = engine
         if engine == "google":
             mcp_engine = "google_light"
+        elif engine == "youtube":
+            mcp_engine = "youtube_search"
+        elif engine == "google_play":
+            # google_play is not supported by MCP server, gracefully fallback to REST
+            return [], "Engine google_play not supported on MCP server (use REST)"
 
         params: Dict[str, Any] = {
             "q": query,
@@ -99,7 +104,12 @@ class SerpApiMCPClient:
 
             try:
                 parsed_json = json.loads(text_content)
-                organic = parsed_json.get("organic_results", [])
+                organic = (
+                    parsed_json.get("organic_results")
+                    or parsed_json.get("news_results")
+                    or parsed_json.get("video_results")
+                    or []
+                )
                 return organic, None
             except json.JSONDecodeError:
                 # If output was markdown or raw text

@@ -114,6 +114,52 @@ The backend contract and services were kept 100% intact to preserve team compati
 - frontend/docs/redesign/README.md      : Plain-language developer & collaborator redesign documentation.
 - changes.txt                           : Project change log & architectural historical record.
 
+-------------------------------------------------------------------------------
+5. AUTONOMOUS MCP AGENT, TRIPLE-PROTOCOL ENGINE & WORKSPACE EVOLUTION
+-------------------------------------------------------------------------------
+
+[A] Autonomous SerpApi MCP Agent (AutonomousMCPAgent)
+- Created backend/app/services/mcp_agent.py: Implements an autonomous decision-making
+  agent operating over the official SerpApi Model Context Protocol (MCP) server.
+- The agent dynamically formulates search dorks based on user inquiries (S3 buckets,
+  credential leaks, admin panels, backup dumps, CVEs, or YouTube PoCs), dispatches
+  JSON-RPC tool calls to https://mcp.serpapi.com, extracts security observations,
+  and synthesizes technical findings.
+- Added POST /api/mcp/chat endpoint in backend/app/main.py accepting user intent,
+  target perimeter, and existing graph nodes for in-depth finding drills.
+
+[B] Triple Protocol Execution Architecture (REST, MCP, Both)
+- Updated Phase1DomainScanner in backend/app/services/phase1_domain.py with 3 selectable execution modes:
+  * "rest": Direct SerpApi REST API queries (standard speed and reliability).
+  * "mcp": Official SerpApi MCP Server execution via JSON-RPC stream (-60% LLM token overhead).
+  * "both": Dual Hybrid Mode running REST and MCP simultaneously, synthesizing and
+    deduplicating discovered URLs across both protocols.
+- Updated backend/app/schemas.py and frontend/lib/types.ts to support "both" protocol.
+
+[C] Conversational MCP Chat Panel & Findings Sidebar
+- Created frontend/components/MCPChatPanel.tsx:
+  * Real-time conversational interface with tool execution pill badges, thought traces,
+    finding cards with direct drawer integration, and quick-prompt action chips.
+- Created frontend/components/MCPFindingsSidebar.tsx:
+  * Persistent findings summary sidebar displaying live security grades, vulnerability counts,
+    and instant drill-down questions.
+- Updated frontend/app/recon/page.tsx:
+  * Seamless workspace switching between Network Graph Canvas (REST/Hybrid) and
+    Autonomous MCP Agent Chat (MCP/Hybrid).
+
+[D] Pricing Overhaul & SerpApi Unit Economics Alignment
+- Restructured pricing tiers in frontend/components/PricingSection.tsx and PaymentModal.tsx:
+  * Community: $0 (First Scan Free trial for developers and researchers).
+  * Starter: $39/mo ($31 billed annually) — 3 audits/day, 1,000 SerpApi queries/mo.
+  * Developer: $99/mo ($79 billed annually) — 15 audits/day, 5,000 SerpApi queries/mo, MCP Agent.
+  * Production: $199/mo ($159 billed annually) — 50 audits/day, 15,000 SerpApi queries/mo, Dual Hybrid.
+- Updated backend/app/main.py Stripe checkout endpoint default amount to $99 (9900 cents).
+
+[E] Testbed Target Calibration to vulnweb.com
+- Standardized demo defaults from reconflow.render.com to vulnweb.com across HeroSection,
+  CorporateAuthModal, FinalCTASection, RemediationSection, and RENDER_DEPLOYMENT.md.
+
 ===============================================================================
 END OF HISTORICAL RECORD
 ===============================================================================
+

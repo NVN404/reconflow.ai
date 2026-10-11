@@ -9,6 +9,7 @@ from typing import Optional
 
 from app.schemas import ScanRequest, ScanResult
 from app.services.phase1_domain import Phase1DomainScanner
+from app.services.mcp_agent import AutonomousMCPAgent
 from app.cache import get_cached_scan
 from app.remediation import REMEDIATION_PLAYBOOKS
 
@@ -28,10 +29,11 @@ app.add_middleware(
 )
 
 scanner = Phase1DomainScanner()
+mcp_agent = AutonomousMCPAgent()
 
 class CheckoutSessionRequest(BaseModel):
-    plan: Optional[str] = "Professional Plan"
-    amount: Optional[int] = 4900 # in cents ($49)
+    plan: Optional[str] = "Developer Plan"
+    amount: Optional[int] = 9900 # in cents ($99)
     success_url: Optional[str] = None
     cancel_url: Optional[str] = None
 
@@ -54,9 +56,9 @@ def create_checkout_session(req: CheckoutSessionRequest):
                     "currency": "usd",
                     "product_data": {
                         "name": f"ReconFlow AI — {req.plan}",
-                        "description": "Continuous Attack Surface Monitoring, 6-Engine SerpApi Recon & Unlimited Sweeps",
+                        "description": "Continuous Attack Surface Monitoring, 6-Engine SerpApi Recon & Multi-Engine Sweeps",
                     },
-                    "unit_amount": req.amount or 4900,
+                    "unit_amount": req.amount or 9900,
                 },
                 "quantity": 1,
             }],
@@ -342,6 +344,29 @@ def run_recon_scan(req: ScanRequest):
         protocol=req.protocol or "rest"
     )
     return result
+
+
+class MCPChatRequest(BaseModel):
+    domain: str
+    message: str
+    existing_nodes: Optional[list] = []
+
+@app.post("/api/mcp/chat")
+def mcp_agent_chat(req: MCPChatRequest):
+    """
+    Autonomous SerpApi MCP Agent Chat Endpoint.
+    Dynamically analyzes user intent, calls SerpApi MCP server tools (e.g. search) via JSON-RPC,
+    and returns agent thoughts, tool invocations, and security findings.
+    """
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    target_domain = req.domain or "vulnweb.com"
+    return mcp_agent.execute_agent_chat(
+        target=target_domain,
+        user_message=req.message,
+        existing_nodes=req.existing_nodes
+    )
 
 
 @app.get("/api/cache/{domain}")

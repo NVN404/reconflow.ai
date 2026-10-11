@@ -57,7 +57,7 @@ export const CorporateAuthModal: React.FC<CorporateAuthModalProps> = ({
       .replace(/^www\./, "")
       .trim();
 
-  const initialDomain = sanitizeDomain(targetDomain || "reconflow.render.com");
+  const initialDomain = sanitizeDomain(targetDomain || "vulnweb.com");
   const [targetInput, setTargetInput] = useState(initialDomain);
   const [email, setEmail] = useState(`security@${initialDomain}`);
   const [step, setStep] = useState<"EMAIL" | "OTP">("EMAIL");
@@ -71,7 +71,7 @@ export const CorporateAuthModal: React.FC<CorporateAuthModalProps> = ({
   // Sync state whenever modal is opened or targetDomain changes
   useEffect(() => {
     if (isOpen) {
-      const clean = sanitizeDomain(targetDomain || "reconflow.render.com");
+      const clean = sanitizeDomain(targetDomain || "vulnweb.com");
       setTargetInput(clean);
       setEmail(`security@${clean}`);
       setStep("EMAIL");

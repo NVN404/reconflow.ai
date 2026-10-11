@@ -119,18 +119,7 @@ class Phase1DomainScanner:
     def api_key(self) -> str:
         return self._api_key or get_serpapi_key()
 
-    def execute_serpapi_query(self, query: str, engine: str = "google", protocol: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Optional[str]]:
-        active_proto = protocol or getattr(self, "_active_protocol", "rest")
-        
-        # 1. Official SerpApi Model Context Protocol (MCP) Execution
-        if active_proto == "mcp":
-            mcp_results, mcp_err = self.mcp_client.search(query, engine=engine)
-            if not mcp_err and mcp_results is not None:
-                return mcp_results, None
-            # Graceful degradation / fallback to direct REST if MCP encounters a network hiccup
-            print(f"[WARN] MCP search fallback to Direct REST for '{query}': {mcp_err}")
-
-        # 2. Direct SerpApi REST API Execution (Default / Resilient Fallback)
+    def _execute_direct_rest(self, query: str, engine: str = "google") -> Tuple[List[Dict[str, Any]], Optional[str]]:
         key = self.api_key
         if not key:
             return [], "No API key configured"
@@ -171,6 +160,33 @@ class Phase1DomainScanner:
         except Exception as e:
             return [], str(e)
 
+    def execute_serpapi_query(self, query: str, engine: str = "google", protocol: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        active_proto = protocol or getattr(self, "_active_protocol", "rest")
+        
+        # 1. MCP SERVER ONLY: Strict isolation - Only query MCP
+        if active_proto == "mcp":
+            mcp_results, mcp_err = self.mcp_client.search(query, engine=engine)
+            return mcp_results or [], mcp_err
+
+        # 2. RUN BOTH (Dual Hybrid Mode): Query BOTH REST and MCP
+        if active_proto == "both":
+            mcp_results, _ = self.mcp_client.search(query, engine=engine)
+            rest_results, rest_err = self._execute_direct_rest(query, engine=engine)
+            combined = (mcp_results or []) + (rest_results or [])
+            seen_links = set()
+            deduped = []
+            for item in combined:
+                link = item.get("link")
+                if link and link not in seen_links:
+                    seen_links.add(link)
+                    deduped.append(item)
+                elif not link:
+                    deduped.append(item)
+            return deduped, rest_err
+
+        # 3. DIRECT REST ONLY (Default): Strict isolation - Only query Direct REST
+        return self._execute_direct_rest(query, engine=engine)
+
     def scan(
         self,
         target: str,
@@ -201,6 +217,13 @@ class Phase1DomainScanner:
                 stage="MCP_ACTIVE",
                 message="Protocol: Official SerpApi MCP Server (Model Context Protocol 2026 via mcp.serpapi.com) — Compact stream active (-60% LLM token overhead)",
                 status="success"
+            ))
+        elif protocol == "both":
+            thoughts.append(AgentThought(
+                timestamp=now,
+                stage="DUAL_HYBRID_ACTIVE",
+                message="Protocol: Dual Hybrid Engine (REST + SerpApi MCP) Active — Multi-engine telemetry executed across both protocols simultaneously (~2x API credits).",
+                status="warning"
             ))
         else:
             thoughts.append(AgentThought(
@@ -255,7 +278,7 @@ class Phase1DomainScanner:
         ))
 
         # --- PASS 1.1: Subdomain Harvesting via Google ---
-        pass1_query = f"site:*.{clean_target} -www.{clean_target}"
+        pass1_query = f"site:{clean_target} -www.{clean_target}"
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="PASS_1_1",
@@ -420,7 +443,7 @@ class Phase1DomainScanner:
                 inspect_result_for_vulnerabilities(res, bing_query, "bing")
 
         # --- PASS 1.1c: Multi-Engine DuckDuckGo Expansion ---
-        ddg_query = f"site:*.{clean_target} -www.{clean_target}"
+        ddg_query = f"site:{clean_target} -www.{clean_target}"
         thoughts.append(AgentThought(
             timestamp=datetime.datetime.now().strftime("%H:%M:%S"),
             stage="PASS_1_1C",

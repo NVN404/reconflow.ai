@@ -22,6 +22,8 @@ ReconFlow AI consists of two services:
    - For `reconflow-api`:
      - `SERPAPI_KEY`: Your SerpApi key (from .env)
      - `GEMINI_API_KEY`: Your Gemini API key (from .env)
+     - `STYTCH_PROJECT_ID`: `project-test-...` (from your Stytch Dashboard)
+     - `STYTCH_SECRET`: `secret-test-...` (from your Stytch Dashboard)
      - `STRIPE_SECRET_KEY`: `sk_test_...` (from your Stripe Dashboard or local .env)
      - `STRIPE_PUBLISHABLE_KEY`: `pk_test_...` (from your Stripe Dashboard or local .env)
    - For `reconflow-frontend`:
@@ -55,6 +57,8 @@ If you prefer setting up the services manually via the Render UI:
    | `PYTHON_VERSION` | `3.11.9` | Recommended Python version |
    | `SERPAPI_KEY` | *(Your key)* | SerpApi Multi-Engine Key |
    | `GEMINI_API_KEY` | *(Your key)* | Google Gemini Flash Key |
+   | `STYTCH_PROJECT_ID` | `project-test-...` | Stytch Project ID for Corporate Work Email Auth |
+   | `STYTCH_SECRET` | `secret-test-...` | Stytch Secret for Corporate Work Email Auth |
    | `STRIPE_SECRET_KEY` | `sk_test_...` | Stripe Test Secret Key |
    | `STRIPE_PUBLISHABLE_KEY` | `pk_test_...` | Stripe Publishable Key |
 
@@ -92,6 +96,6 @@ If you prefer setting up the services manually via the Render UI:
 2. **Frontend App**:
    Visit `https://reconflow-frontend.onrender.com`.
 3. **Run a Test Audit**:
-   - Audit `reconflow.render.com` using email `security@reconflow.render.com`.
+   - Audit `vulnweb.com` using email `security@vulnweb.com`.
    - Inspect the interactive React Flow attack surface topology.
    - Run a 2nd audit to test the Stripe Upgrade prompt.

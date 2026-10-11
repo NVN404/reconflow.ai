@@ -82,7 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
               type="text"
               value={inputDomain}
               onChange={(e) => setInputDomain(e.target.value)}
-              placeholder="Enter domain (e.g. reconflow.render.com)"
+              placeholder="Enter domain (e.g. vulnweb.com)"
               disabled={isScanning}
               className="w-full pl-11 pr-36 py-3.5 rounded-lg bg-surface-elevated border border-border focus:border-lime focus:ring-1 focus:ring-lime text-sm font-mono text-foreground placeholder:text-foreground-muted outline-none transition-all shadow-md backdrop-blur-md"
             />
@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScanTarget, isScanni
           className="flex flex-wrap items-center justify-center gap-2 text-xs text-foreground-muted font-mono"
         >
           <span>Try target:</span>
-          {["vulnweb.com", "reconflow.render.com"].map((target) => (
+          {["vulnweb.com", "acunetix.com"].map((target) => (
             <button
               key={target}
               onClick={() => handleChipClick(target)}
