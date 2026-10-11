@@ -306,7 +306,6 @@ def root_index():
     return {
         "status": "ok",
         "service": "ReconFlow AI — EASM Agent API",
-        "track": "Track 01: AI Agents",
         "documentation": "/docs",
         "health": "/health",
         "endpoints": [
@@ -325,7 +324,6 @@ def health_check():
         "status": "ok",
         "service": "ReconFlow AI EASM Agent",
         "version": "1.0.0",
-        "track": "Track 01: AI Agents",
         "mcp_enabled": True
     }
 

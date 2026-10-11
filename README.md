@@ -1,7 +1,6 @@
 # 🛡️ ReconFlow AI
 ### Autonomous External Attack Surface Management & Threat Intelligence Agent
 
-[![Track](https://img.shields.io/badge/Track-01%20AI%20Agents%20(SerpApi%20MCP%20Native)-blueviolet?style=for-the-badge)](https://serpapi.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js%2014-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![SerpApi](https://img.shields.io/badge/SerpApi-Multi--Engine%20Recon-F37021?style=for-the-badge)](https://serpapi.com/)
@@ -9,7 +8,6 @@
 [![Stripe](https://img.shields.io/badge/Stripe-Subscription%20Billing-6366F1?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](LICENSE)
 
-**Track Selection:** Track 01 — AI Agents (SerpApi MCP Native)  
 **Hackathon:** SerpApi India Hackathon 2026 · Target Deadline: October 5, 2026, 23:59 IST  
 **Cost to Run:** $0 / ₹0 (Operates 100% within SerpApi Free Tier + Localhost)  
 **Methodology:** 100% Pure Search Intelligence & Passive Reconnaissance (Multi-Engine SerpApi EASM)
@@ -63,48 +61,48 @@ ReconFlow AI incorporates official tools recommended by SerpApi Developer Advoca
 - **Multi-Engine Intelligence**: Cross-engine perimeter verification across `google`, `google_light`, `bing`, `duckduckgo`, `youtube`, `google_news`, and `google_play`.
 
 ```mermaid
-graph TD
-    User([User Target Domain: e.g. vulnweb.com]) --> CorporateGate[Step 0: Corporate Work Email Gate\nStytch Zero-Trust Domain Verification @target.com]
-    CorporateGate --> SearchBar[SearchBar Console: Vector Controls & Protocol Selector\nREST | SerpApi MCP | Dual Hybrid]
+flowchart TD
+    User(["Target Perimeter: vulnweb.com"]) --> CorporateGate["Corporate Work Email Gate: Stytch Zero-Trust OTP"]
+    CorporateGate --> SearchBar["SearchBar Console: Vector Controls and Protocol Switcher"]
     
-    SearchBar -->|POST /api/scan| FastAPI[FastAPI Backend Engine: port 8001]
-    SearchBar -->|POST /api/mcp/chat| MCPAgent[Autonomous SerpApi MCP Agent\nNatural Language Copilot]
+    SearchBar -->|"POST /api/scan"| FastAPI["FastAPI Backend Engine (Port 8001)"]
+    SearchBar -->|"POST /api/mcp/chat"| MCPAgent["Autonomous SerpApi MCP Agent (Conversational Copilot)"]
     
-    subgraph Protocol_Router [Recon Protocol Engine]
-        FastAPI -->|Protocol: rest| RestScanner[Direct REST Engine]
-        FastAPI -->|Protocol: mcp| McpScanner[Official SerpApi MCP Server]
-        FastAPI -->|Protocol: both| HybridScanner[Dual Hybrid Engine: REST + MCP Concurrent]
+    subgraph Protocol_Router ["Recon Protocol Engine"]
+        FastAPI -->|"Protocol: rest"| RestScanner["Direct REST Engine"]
+        FastAPI -->|"Protocol: mcp"| McpScanner["Official SerpApi MCP Server"]
+        FastAPI -->|"Protocol: both"| HybridScanner["Dual Hybrid Engine (REST + MCP Concurrent)"]
     end
 
-    subgraph Multi_Engine_Sweeps [Passive Reconnaissance Radar]
-        RestScanner & McpScanner & HybridScanner --> GoogleSub[Google Subdomain Harvest & Param Probes]
-        RestScanner & McpScanner & HybridScanner --> BingSub[Bing Multi-Engine Verification]
-        RestScanner & McpScanner & HybridScanner --> DDGSub[DuckDuckGo Cross-Validation]
-        RestScanner & McpScanner & HybridScanner --> GitHubLeaks[GitHub Credential & Secret Leaks]
-        RestScanner & McpScanner & HybridScanner --> S3Scan[Multi-Cloud S3 / Blob Bucket Hunter]
-        RestScanner & McpScanner & HybridScanner --> NewsRadar[Google News Threat Radar]
-        RestScanner & McpScanner & HybridScanner --> YouTubeRadar[YouTube Exploit PoC Radar]
-        RestScanner & McpScanner & HybridScanner --> PlayStoreAudit[Google Play Mobile Perimeter]
+    subgraph Multi_Engine_Sweeps ["Passive Reconnaissance Radar"]
+        RestScanner & McpScanner & HybridScanner --> GoogleSub["Google Subdomain Harvest & Param Probes"]
+        RestScanner & McpScanner & HybridScanner --> BingSub["Bing Multi-Engine Verification"]
+        RestScanner & McpScanner & HybridScanner --> DDGSub["DuckDuckGo Cross-Validation"]
+        RestScanner & McpScanner & HybridScanner --> GitHubLeaks["GitHub Credential & Secret Leaks"]
+        RestScanner & McpScanner & HybridScanner --> S3Scan["Multi-Cloud S3 / Blob Bucket Hunter"]
+        RestScanner & McpScanner & HybridScanner --> NewsRadar["Google News Threat Radar"]
+        RestScanner & McpScanner & HybridScanner --> YouTubeRadar["YouTube Exploit PoC Radar"]
+        RestScanner & McpScanner & HybridScanner --> PlayStoreAudit["Google Play Mobile Perimeter"]
     end
 
-    subgraph AI_Triage [AI Triage & Topology Engine]
-        Multi_Engine_Sweeps --> TriageLayer[triage.py: ai_triage_findings]
-        TriageLayer -->|Gemini Flash| NoisePurge[AI False-Positive & Noise Elimination]
-        NoisePurge --> DualZoneLayout[layout_graph: Dual-Zone Graph Assembly]
-        DualZoneLayout --> ExecutiveAI[Gemini Flash CISO Executive Briefing]
+    subgraph AI_Triage ["AI Triage & Topology Engine"]
+        Multi_Engine_Sweeps --> TriageLayer["triage.py: ai_triage_findings"]
+        TriageLayer -->|"Gemini Flash"| NoisePurge["AI False-Positive & Noise Elimination"]
+        NoisePurge --> DualZoneLayout["layout_graph: Dual-Zone Graph Assembly"]
+        DualZoneLayout --> ExecutiveAI["Gemini Flash CISO Executive Briefing"]
     end
     
-    ExecutiveAI -->|ScanResult JSON| Frontend[Next.js 14 App Router: port 3000]
-    MCPAgent -->|Agent Thoughts & Findings| Frontend
+    ExecutiveAI -->|"ScanResult JSON"| Frontend["Next.js 14 App Router (Port 3000)"]
+    MCPAgent -->|"Agent Thoughts & Findings"| Frontend
     
-    subgraph Frontend_Workspace [Dual-Mode Interactive Workspace]
-        Frontend --> LayoutToggle{Workspace Mode}
-        LayoutToggle -->|Topology Graph| GraphCanvas[React Flow Graph Canvas\nDagre TB / LR Auto-Layout]
-        LayoutToggle -->|Autonomous Copilot| MCPChat[MCP Chat Panel & Findings Sidebar\nInteractive AI Reasoning]
-        GraphCanvas --> Zone1[ZONE 1: Perimeter Assets & Threat Intel]
-        GraphCanvas --> Zone2[ZONE 2: Active Vulnerability Perimeter]
-        GraphCanvas & MCPChat --> Drawer[Finding Drawer: CVSS, OWASP, CWE & Fix]
-        Frontend --> DossierExport[1-Click CISO Markdown Dossier Export]
+    subgraph Frontend_Workspace ["Dual-Mode Interactive Workspace"]
+        Frontend --> LayoutToggle{"Workspace Mode"}
+        LayoutToggle -->|"Topology Graph"| GraphCanvas["React Flow Graph Canvas (Dagre TB / LR Auto-Layout)"]
+        LayoutToggle -->|"Autonomous Copilot"| MCPChat["MCP Chat Panel & Findings Sidebar (Interactive AI Reasoning)"]
+        GraphCanvas --> Zone1["ZONE 1: Perimeter Assets & Threat Intel"]
+        GraphCanvas --> Zone2["ZONE 2: Active Vulnerability Perimeter"]
+        GraphCanvas & MCPChat --> Drawer["Finding Drawer: CVSS, OWASP, CWE & Remediation"]
+        Frontend --> DossierExport["1-Click CISO Markdown Dossier Export"]
     end
 ```
 
@@ -314,4 +312,4 @@ ReconFlow AI is production-ready for deployment to **Render.com** using the incl
 ---
 
 ## 📄 License & Hackathon Submission
-MIT License. Built for the **SerpApi India Hackathon 2026 (Track 01: AI Agents)**.
+MIT License. Built for the **SerpApi India Hackathon 2026**.

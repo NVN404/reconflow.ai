@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "ReconFlow AI — Autonomous External Attack Surface Management",
   description:
-    "Autonomous EASM & Threat Intelligence agent powered by SerpApi MCP for SerpApi India Hackathon 2026 (Track 01).",
+    "Autonomous EASM & Threat Intelligence agent powered by SerpApi MCP for SerpApi India Hackathon 2026.",
 };
 
 export default function RootLayout({

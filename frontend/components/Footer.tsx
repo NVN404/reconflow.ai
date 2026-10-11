@@ -11,9 +11,6 @@ export const Footer: React.FC = () => {
             <span className="text-sm font-bold text-foreground tracking-tight">
               RECONFLOW<span className="text-lime">.AI</span>
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-surface-elevated border border-border text-foreground-secondary">
-              Track 01: AI Agents
-            </span>
           </div>
           <p className="text-foreground-muted text-xs font-sans leading-relaxed">
             Autonomous external attack-surface discovery and threat intelligence powered by SerpApi MCP.
